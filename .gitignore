@@ -1,0 +1,21 @@
+# Sanal ortam klasörünü yoksay
+venv/
+
+# Python'un oluşturduğu geçici dosyaları yoksay
+__pycache__/
+*.pyc
+
+# PyInstaller'ın oluşturduğu klasörleri yoksay
+build/
+dist/
+*.spec
+
+# Veritabanı dosyasını yoksay (genellikle kişisel veri içerir)
+*.db
+*.db-journal
+
+# Log dosyalarını yoksay
+*.log
+
+# IDE'ye özel ayar dosyaları (VS Code için)
+.vscode/
