@@ -6,9 +6,6 @@
 
 StokGold is a modern and user-friendly desktop inventory management application developed for jewelers and jewelry retailers. With this application, you can easily manage your products, track stock movements, and generate important reports about your business.
 
-![Application Screenshot](https://i.imgur.com/your_screenshot_url.png)
-*(Note: Replace this link with a URL from an image hosting service like [Imgur](https://imgur.com/) after uploading a screenshot of your application.)*
-
 ---
 
 ## 🌟 Features
