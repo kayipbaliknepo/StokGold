@@ -43,6 +43,7 @@ class AddProductDialog(QDialog):
         self.maliyet_input.setValidator(QDoubleValidator(0.0, 1_000_000.0, 2))
 
         self.stok_adeti_input = QSpinBox()
+        self.stok_adeti_input.setMaximum(99999)
         self.stok_adeti_input.setValue(1)
 
         form_layout.addRow("Ürün Kodu:", self.urun_kodu_input)
