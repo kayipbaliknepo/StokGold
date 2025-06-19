@@ -1,37 +1,17 @@
-# app/database.py - GÜNCELLENMİŞ VE DOĞRU KOD
+# MIT License
+# Copyright (c) 2025 Aykut Yahya Ay
+# See LICENSE file for full license details.
+
 from datetime import datetime
 from .models import Urun
 import sqlite3
-import configparser
+from .utils import DATABASE_PATH
 import os
 
 
 def get_db_connection():
-    """
-    Proje ana dizinindeki config.ini dosyasını bularak veritabanı
-    bağlantısı oluşturur ve bu bağlantıyı geri döner.
-    """
-    # 1. Projenin ana (kök) dizinini güvenilir bir şekilde bulalım
-    #    __file__ -> app/database.py
-    #    os.path.dirname(__file__) -> app
-    #    os.path.join(..., '..') -> kuyumcu_stok_takip/ (Proje ana dizini)
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-    # 2. config.ini dosyasının tam yolunu oluşturalım
-    config_path = os.path.join(project_root, 'config.ini')
-
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    # 3. Veritabanı adını alalım. Bulamazsa 'kuyumcu.db' kullansın
-    db_name = config.get('Database', 'name', fallback='kuyumcu.db')
-
-    # 4. Veritabanı dosyasının da tam yolunu ana dizine göre oluşturalım
-    db_path = os.path.join(project_root, db_name)
-
-    # 5. Tam yola göre bağlantı kuralım
-    print(f"Veritabanına bağlanılıyor: {db_path}")
-    conn = sqlite3.connect(db_path)
+    """AppData'daki veritabanı dosyasına bağlanır."""
+    conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -62,8 +42,20 @@ def create_table():
             )
         """)
 
+        cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS hareketler (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        urun_id INTEGER NOT NULL,
+                        tip TEXT NOT NULL, -- 'Alış' veya 'Satış'
+                        adet INTEGER NOT NULL,
+                        birim_fiyat REAL NOT NULL,
+                        toplam_tutar REAL NOT NULL,
+                        tarih TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (urun_id) REFERENCES urunler (id)
+                    )
+                """)
+
         conn.commit()
-        print("Tablo şeması başarıyla kontrol edildi/güncellendi.")
 
     except sqlite3.Error as e:
         print(f"Veritabanı hatası: {e}")
@@ -85,7 +77,7 @@ def add_product(urun: Urun):
             urun.eklenme_tarihi.strftime('%Y-%m-%d')
         ))
         conn.commit()
-        return cursor.lastrowid  # Eklenen ürünün ID'sini döndür
+        return cursor.lastrowid
     except sqlite3.Error as e:
         print(f"Veritabanı hatası (add_product): {e}")
         return None
@@ -185,8 +177,8 @@ def search_products(search_term: str):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Arama teriminin başına ve sonuna % ekleyerek kısmi eşleşmeleri bulmasını sağlıyoruz.
-        # Örn: 'yüz' araması, 'Yüzük' sonucunu getirecektir.
+
+
         query_term = f"%{search_term}%"
 
         # LIKE operatörü ile arama yapıyoruz. COLLATE NOCASE, büyük/küçük harf duyarsız arama yapar.
@@ -197,7 +189,7 @@ def search_products(search_term: str):
         cursor.execute(sql, (query_term, query_term))
         rows = cursor.fetchall()
 
-        # get_all_products fonksiyonundaki ile aynı mantıkla Urun nesneleri oluşturuyoruz.
+
         urunler = []
         for row in rows:
             tarih_objesi = datetime.strptime(row['eklenme_tarihi'], '%Y-%m-%d').date() if row[
@@ -218,7 +210,7 @@ def search_products(search_term: str):
             conn.close()
 
 
-# app/database.py (en alta eklenecek kod)
+
 
 def get_total_inventory_value():
     """Stoktaki tüm ürünlerin toplam maliyet değerini hesaplar."""
@@ -227,14 +219,14 @@ def get_total_inventory_value():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Her ürünün maliyeti ile stok adedini çarpıp genel toplamı alırız.
+
         sql = "SELECT SUM(maliyet * stok_adeti) FROM urunler"
         cursor.execute(sql)
 
-        # fetchone() tek bir sonuç satırı döndürür, örn: (toplam_deger,)
+
         result = cursor.fetchone()[0]
 
-        # Eğer veritabanı boşsa sonuç None olabilir, bu durumu kontrol edelim.
+
         return result if result is not None else 0.0
 
     except sqlite3.Error as e:
@@ -252,7 +244,7 @@ def get_product_counts_by_type():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # COUNT(*) yerine SUM(stok_adeti) kullanarak toplam stok sayısını alıyoruz.
+
         sql = """SELECT cins, SUM(stok_adeti) as toplam_stok 
                  FROM urunler 
                  GROUP BY cins 
@@ -269,7 +261,7 @@ def get_product_counts_by_type():
             conn.close()
 
 
-# app/database.py dosyasının en altına YENİ fonksiyonu EKLEYİN:
+
 def get_total_grams():
     """Stoktaki tüm ürünlerin toplam gramajını hesaplar."""
     conn = None
@@ -302,14 +294,14 @@ def update_stock(product_id: int, quantity_change: int):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # stok_adeti = stok_adeti + ? sorgusu, mevcut değere ekleme/çıkarma yapar.
-        # Bu, race condition'ları önleyen en güvenli yöntemdir.
+
+
         sql = "UPDATE urunler SET stok_adeti = stok_adeti + ? WHERE id = ?"
 
         cursor.execute(sql, (quantity_change, product_id))
         conn.commit()
 
-        # Güncellemenin başarılı olup olmadığını kontrol et
+
         return cursor.rowcount > 0
 
     except sqlite3.Error as e:
@@ -318,4 +310,126 @@ def update_stock(product_id: int, quantity_change: int):
     finally:
         if conn:
             conn.close()
+
+
+def log_transaction(urun_id: int, tip: str, adet: int, birim_fiyat: float):
+    """Yapılan bir alış veya satış işlemini hareketler tablosuna kaydeder."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    toplam_tutar = adet * birim_fiyat
+    sql = """INSERT INTO hareketler (urun_id, tip, adet, birim_fiyat, toplam_tutar)
+             VALUES (?, ?, ?, ?, ?)"""
+    try:
+        cursor.execute(sql, (urun_id, tip, adet, birim_fiyat, toplam_tutar))
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Hareket loglama hatası: {e}")
+    finally:
+        conn.close()
+
+
+def get_daily_summary(selected_date: str):
+    """Belirli bir tarihteki toplam alış ve satış tutarlarını döndürür."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    summary = {'alis': 0.0, 'satis': 0.0}
+    try:
+        # Toplam Alış
+        sql_alis = "SELECT SUM(toplam_tutar) FROM hareketler WHERE tip = 'Alış' AND date(tarih) = ?"
+        cursor.execute(sql_alis, (selected_date,))
+        result_alis = cursor.fetchone()[0]
+        if result_alis:
+            summary['alis'] = result_alis
+
+        # Toplam Satış
+        sql_satis = "SELECT SUM(toplam_tutar) FROM hareketler WHERE tip = 'Satış' AND date(tarih) = ?"
+        cursor.execute(sql_satis, (selected_date,))
+        result_satis = cursor.fetchone()[0]
+        if result_satis:
+            summary['satis'] = result_satis
+
+    except sqlite3.Error as e:
+        print(f"Günlük özet alınırken hata: {e}")
+    finally:
+        conn.close()
+    return summary
+
+
+def get_transactions_for_date(selected_date: str):
+    """
+    Belirli bir tarihteki tüm hareketleri, ürün detaylarıyla birlikte döndürür.
+    """
+    conn = get_db_connection()
+    # Sonuçları sözlük olarak almak için row_factory'i geçici olarak değiştiriyoruz
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # hareketler (h) ve urunler (u) tablolarını JOIN ile birleştiriyoruz.
+    sql = """SELECT 
+                h.tip, 
+                h.adet, 
+                h.birim_fiyat, 
+                h.toplam_tutar,
+                h.tarih,
+                u.urun_kodu,
+                u.cins,
+                u.ayar,
+                u.gram
+             FROM hareketler h
+             JOIN urunler u ON h.urun_id = u.id
+             WHERE date(h.tarih) = ?
+             ORDER BY h.tarih DESC"""
+
+    try:
+        cursor.execute(sql, (selected_date,))
+        # Her satırı bir sözlüğe çevirerek liste halinde döndür
+        return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        print(f"Günlük hareketler alınırken hata: {e}")
+        return []
+    finally:
+        conn.close()
+def get_statistics_for_period(start_date: str, end_date: str):
+    """
+    Belirli bir tarih aralığı için satış istatistiklerini hesaplar.
+    Toplam Satış, Toplam Maliyet ve Net Kâr döndürür.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    stats = {
+        'total_sales': 0.0,
+        'total_cogs': 0.0,  # Cost of Goods Sold (Satılan Malın Maliyeti)
+        'net_profit': 0.0
+    }
+
+    try:
+        # 1. Belirtilen aralıktaki Toplam Satış Tutarını Hesapla
+        sql_sales = """SELECT SUM(toplam_tutar) FROM hareketler 
+                       WHERE tip = 'Satış' AND date(tarih) BETWEEN ? AND ?"""
+        cursor.execute(sql_sales, (start_date, end_date))
+        total_sales_result = cursor.fetchone()[0]
+        if total_sales_result:
+            stats['total_sales'] = total_sales_result
+
+        # 2. Aynı aralıkta Satılan Malların Maliyetini Hesapla
+        sql_cogs = """SELECT SUM(h.adet * u.maliyet) 
+                      FROM hareketler h
+                      JOIN urunler u ON h.urun_id = u.id
+                      WHERE h.tip = 'Satış' AND date(h.tarih) BETWEEN ? AND ?"""
+        cursor.execute(sql_cogs, (start_date, end_date))
+        total_cogs_result = cursor.fetchone()[0]
+        if total_cogs_result:
+            stats['total_cogs'] = total_cogs_result
+
+        # 3. Net Kârı Hesapla
+        stats['net_profit'] = stats['total_sales'] - stats['total_cogs']
+
+    except sqlite3.Error as e:
+        print(f"İstatistik hesaplama hatası: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+    return stats
+
 

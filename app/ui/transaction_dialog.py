@@ -1,3 +1,7 @@
+# MIT License
+# Copyright (c) 2025 Aykut Yahya Ay
+# See LICENSE file for full license details.
+
 import os
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QListWidget, QListWidgetItem,
@@ -7,10 +11,10 @@ from PyQt6.QtGui import QFont, QPixmap
 from PyQt6.QtCore import Qt, QSize
 
 from app.models import Urun
-from app.database import get_all_products, update_stock
+from app.database import get_all_products, update_stock, log_transaction
 
 
-# --- Listede Gösterilecek Özel Bir Widget Oluşturalım ---
+
 class ProductListItem(QWidget):
     def __init__(self, urun: Urun):
         super().__init__()
@@ -19,7 +23,7 @@ class ProductListItem(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # Resim Alanı
+
         image_label = QLabel()
         if urun.resim_yolu and os.path.exists(urun.resim_yolu):
             pixmap = QPixmap(urun.resim_yolu)
@@ -32,7 +36,7 @@ class ProductListItem(QWidget):
 
         layout.addWidget(image_label)
 
-        # Bilgi Alanı
+
         info_layout = QVBoxLayout()
         info_layout.setSpacing(2)
 
@@ -51,7 +55,7 @@ class ProductListItem(QWidget):
         layout.addStretch()
 
 
-# --- Ana Diyalog Penceresi ---
+
 class TransactionDialog(QDialog):
     def __init__(self, mode: str, parent=None):
         super().__init__(parent)
@@ -84,37 +88,65 @@ class TransactionDialog(QDialog):
             list_item = QListWidgetItem(self.product_list_widget)
             custom_widget = ProductListItem(urun)
 
-            # Her bir item'ın boyutunu widget'ın boyutuna göre ayarla
+
             list_item.setSizeHint(custom_widget.sizeHint())
             self.product_list_widget.addItem(list_item)
             self.product_list_widget.setItemWidget(list_item, custom_widget)
 
     def _on_product_selected(self, item: QListWidgetItem):
-        """Bir ürün seçildiğinde miktar sorar ve işlemi gerçekleştirir."""
-        widget = self.product_list_widget.itemWidget(item)
-        urun = widget.urun
+        """Bir ürün seçildiğinde miktar ve fiyat sorar, işlemi gerçekleştirir."""
+        try:
+            widget = self.product_list_widget.itemWidget(item)
+            urun = widget.urun
 
-        is_purchase = self.mode == 'alış'
-        title = "Alış Miktarı" if is_purchase else "Satış Miktarı"
-        label = f"'{urun.cins}' için {self.mode} yapılacak adet:"
+            is_purchase = self.mode == 'alış'
 
-        quantity, ok = QInputDialog.getInt(self, title, label, value=1, min=1, max=9999)
+            # 1. Adet Sor
+            quantity, ok1 = QInputDialog.getInt(self, f"{self.mode.capitalize()} Miktarı", f"İşlem yapılacak adet:",
+                                                value=1, min=1, max=99999)
+            if not ok1:
+                return  # Kullanıcı iptal etti
 
-        if ok:
-            # Satış işleminde stok kontrolü yap
+            # 2. Satışta Stok Kontrolü Yap
             if not is_purchase and quantity > urun.stok_adeti:
                 QMessageBox.warning(self, "Yetersiz Stok",
-                                    f"Satış yapmak istediğiniz miktar ({quantity}) mevcut stoktan ({urun.stok_adeti}) fazla olamaz.")
+                                    f"Satış miktarı ({quantity}) mevcut stoktan ({urun.stok_adeti}) fazla olamaz.")
                 return
 
-            # Alış için pozitif, satış için negatif miktar
+            # 3. Fiyat Sor (varsayılan değer ile)
+            # Satışta, ürünün bir satış fiyatı varsa onu, yoksa maliyetini öner
+            if is_purchase:
+                default_price = urun.maliyet
+            else:
+                default_price = urun.satis_fiyati if urun.satis_fiyati and urun.satis_fiyati > 0 else urun.maliyet
+
+            price, ok2 = QInputDialog.getDouble(self, f"{self.mode.capitalize()} Fiyatı",
+                                                f"Birim {self.mode} fiyatı (TL):", value=default_price, min=0,
+                                                decimals=2)
+            if not ok2:
+                return  # Kullanıcı iptal etti
+
+            # 4. Veritabanı İşlemlerini Yap
             quantity_change = quantity if is_purchase else -quantity
 
-            success = update_stock(urun.id, quantity_change)
+            # Önce stoğu güncelle
+            if update_stock(urun.id, quantity_change):
+                # Sonra işlemi kaydet (logla)
+                log_transaction(urun.id, self.mode.capitalize(), quantity, price)
 
-            if success:
                 QMessageBox.information(self, "İşlem Başarılı",
                                         f"{urun.cins} ürününün stoğu {quantity} adet {'arttırıldı' if is_purchase else 'azaltıldı'}.")
                 self.accept()  # Diyalogu kapat ve başarılı sinyali gönder
             else:
                 QMessageBox.critical(self, "İşlem Başarısız", "Stok güncellenirken bir veritabanı hatası oluştu.")
+
+        except Exception as e:
+            # Herhangi bir beklenmedik hata olursa, çökme yerine bu mesajı göster.
+            import traceback
+            error_message = f"İşlem sırasında beklenmedik bir hata oluştu:\n\n{e}"
+            detailed_error = traceback.format_exc()
+
+            print("KRİTİK HATA:", error_message)
+            print(detailed_error)
+
+            QMessageBox.critical(self, "Kritik Hata", f"{error_message}\n\nDetaylar terminal ekranına yazdırıldı.")

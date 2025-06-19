@@ -1,3 +1,7 @@
+# MIT License
+# Copyright (c) 2025 Aykut Yahya Ay
+# See LICENSE file for full license details.
+
 import os
 import shutil
 import time
@@ -8,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QDoubleValidator
 from app.models import Urun
+from app.utils import IMAGE_DIR, BARCODE_DIR
 from datetime import date
 import barcode
 from barcode.writer import ImageWriter
@@ -78,15 +83,15 @@ class AddProductDialog(QDialog):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Bir Resim Seçin", "", "Resim Dosyaları (*.png *.jpg *.jpeg *.bmp)"
         )
-        # --- DÜZELTME BURADA ---
-        # 'if' bloğu, 'def _select_image' fonksiyonunun içine doğru şekilde girintilendi.
+
+
         if file_path:
             self.selected_image_path = file_path
             self.image_path_label.setText(os.path.basename(file_path))
             self.image_path_label.setStyleSheet("")
 
     def populate_form(self):
-        """Formu düzenlenecek ürünün bilgileriyle doldurur."""
+
         self.urun_kodu_input.setText(self.urun_to_edit.urun_kodu)
         self.cins_input.setText(self.urun_to_edit.cins)
         self.ayar_input.setValue(self.urun_to_edit.ayar)
@@ -102,13 +107,12 @@ class AddProductDialog(QDialog):
             self.image_path_label.setStyleSheet("")
 
     def _generate_barcode(self, product_code: str):
-        """Verilen ürün koduna göre barkod resmi oluşturur."""
+
         try:
-            if not product_code or any(c in '<>:"/\\|?*' for c in product_code):
-                print(f"!!! HATA: Ürün kodu '{product_code}' geçersiz karakterler içeriyor.")
-                return
+
             generated_barcode = barcode.get('code128', product_code, writer=ImageWriter())
-            barcode_path = os.path.join("assets", "barcodes", f"{product_code}.png")
+
+            barcode_path = os.path.join(BARCODE_DIR, f"{product_code}.png")
             generated_barcode.write(barcode_path, options={"write_text": False})
             print(f"BAŞARILI: Barkod oluşturuldu: {barcode_path}")
         except Exception as e:
@@ -116,7 +120,7 @@ class AddProductDialog(QDialog):
             print(traceback.format_exc())
 
     def get_product_data(self) -> Urun:
-        """Penceredeki verilerden bir Urun nesnesi oluşturur."""
+
         urun = Urun()
         urun.urun_kodu = self.urun_kodu_input.text()
         urun.cins = self.cins_input.text()
@@ -139,9 +143,11 @@ class AddProductDialog(QDialog):
             source_path = self.selected_image_path
             _, extension = os.path.splitext(source_path)
             new_filename = f"{urun.urun_kodu}{extension}"
-            new_image_relative_path = os.path.join("assets", "product_images", new_filename)
+
+            destination_path = os.path.join(IMAGE_DIR, new_filename)
             try:
-                shutil.copy(source_path, new_image_relative_path)
+                shutil.copy(source_path, destination_path)
+                new_image_relative_path = destination_path # Veritabanına tam yolu kaydediyoruz
             except Exception as e:
                 print(f"!!! HATA: Resim kopyalanamadı: {e}")
 

@@ -1,15 +1,15 @@
 ; Inno Setup Script
-; StokGold Programı için Kurulum Reçetesi (Tek Dosya .exe Modu)
+; StokGold Programı için Nihai Kurulum Reçetesi
 
 [Setup]
 AppId={{StokGold-C1B2A3D4}}
 AppName=StokGold
-AppVersion=1.0
+AppVersion=1.1
 AppPublisher=Aykut Ay
 DefaultDirName={autopf}\StokGold
 DefaultGroupName=StokGold
 DisableProgramGroupPage=yes
-OutputDir=.\SetupOutput
+OutputDir=.\SetupOutput1.1
 OutputBaseFilename=StokGold-Setup
 SetupIconFile=assets\icons\app_icon.ico
 Compression=lzma
@@ -23,14 +23,15 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
-; --- DEĞİŞİKLİK BURADA ---
+; --- EN ÖNEMLİ DEĞİŞİKLİK BURADA ---
 [Files]
-; Artık tek bir klasörü değil, gerekli dosyaları tek tek belirtiyoruz.
-; Bu yollar, .iss script'inin bulunduğu ana proje dizinine göredir.
+; Artık sadece ana .exe dosyasını ve programın çalışması için gereken
+; sabit assets klasörünü (ikonlar için) alıyoruz.
+; Veritabanı, resimler ve config dosyaları kurulumla gelmiyor, 
+; program ilk açılışta kullanıcının AppData klasöründe kendisi oluşturuyor.
 Source: "dist\StokGold.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "kuyumcu.db"; DestDir: "{app}"; Flags: ignoreversion
-Source: "config.ini"; DestDir: "{app}"; Flags: ignoreversion
+
 
 [Icons]
 Name: "{group}\StokGold"; Filename: "{app}\StokGold.exe"
