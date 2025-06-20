@@ -1,16 +1,17 @@
-# app/ui/pages/inventory_page.py
+# MIT License
+# Copyright (c) 2025 Aykut Yahya Ay
+# See LICENSE file for full license details.
 
 import os
 import traceback
-from PyQt6.QtWidgets import (
+import openpyxl
+from datetime import datetime
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableView,
-    QLineEdit, QLabel, QFrame, QMessageBox
+    QLineEdit, QLabel, QFrame, QMessageBox, QApplication, QStyle, QFileDialog
 )
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QFont, QPixmap
-from PyQt6.QtCore import Qt, QSortFilterProxyModel
-
-# --- DİKKAT: Import Yolları Değişti ---
-# Artık 'pages' klasörünün içinde olduğumuz için, bir üst dizindeki modüllere '..' ile erişiyoruz.
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QPixmap, QColor, QIcon
+from PySide6.QtCore import Qt, QSortFilterProxyModel
 from ...utils import BARCODE_DIR
 from ..transaction_dialog import TransactionDialog
 from ...models import Urun
@@ -36,25 +37,19 @@ class NumericSortProxyModel(QSortFilterProxyModel):
         return super().lessThan(source_left, source_right)
 
 
-# --- SINIF DEĞİŞİKLİĞİ: QMainWindow -> QWidget ---
 class InventoryPage(QWidget):
-    """
-    Ürün envanterini (tablo, önizleme, yönetim butonları) gösteren ana sayfa.
-    """
+    """Ürün envanterini gösteren ve yöneten ana sayfa."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._urunler_cache = {}
 
-        # Arayüzü doğrudan bu widget'ın kendi layout'una kuruyoruz
         main_hbox_layout = QHBoxLayout(self)
 
-        # Sol Panel (Butonlar ve Tablo)
         left_vbox_layout = QVBoxLayout()
         self._create_top_bar(left_vbox_layout)
         self._create_product_table(left_vbox_layout)
 
-        # Sağ Panel (Önizleme)
         right_vbox_layout = QVBoxLayout()
         self._create_preview_pane(right_vbox_layout)
 
@@ -63,26 +58,28 @@ class InventoryPage(QWidget):
 
         self._connect_signals()
         self.load_all_products()
-        self.update_button_states()
-
-    # Not: Geri kalan tüm fonksiyonlar (_create_top_bar, _populate_table, open_add_product_dialog vb.)
-    # daha önceki MainWindow sınıfındaki ile birebir aynıdır. Hiçbir değişiklik gerekmez.
 
     def _create_top_bar(self, layout: QVBoxLayout):
         top_bar_layout = QHBoxLayout()
         self.add_product_button = QPushButton("Yeni Ürün Ekle")
         self.edit_product_button = QPushButton("Seçili Ürünü Düzenle")
         self.delete_product_button = QPushButton("Seçili Ürünü Sil")
+        self.export_excel_button = QPushButton("Excel'e Aktar")
+
         self.add_product_button.setStyleSheet("background-color: #4CAF50; color: white; padding: 5px;")
         self.delete_product_button.setStyleSheet("background-color: #f44336; color: white; padding: 5px;")
+        self.export_excel_button.setStyleSheet("background-color: #1D6F42; color: white; padding: 5px;")
+
         top_bar_layout.addWidget(self.add_product_button)
         top_bar_layout.addWidget(self.edit_product_button)
         top_bar_layout.addWidget(self.delete_product_button)
+        top_bar_layout.addWidget(self.export_excel_button)
         top_bar_layout.addStretch()
         top_bar_layout.addWidget(QLabel("Ürün Ara:"))
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Ürün kodu veya cinsine göre ara...")
         top_bar_layout.addWidget(self.search_input)
+
         layout.addLayout(top_bar_layout)
 
     def _create_product_table(self, layout: QVBoxLayout):
@@ -96,7 +93,7 @@ class InventoryPage(QWidget):
         self.product_table.setSortingEnabled(True);
         self.product_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
         self.product_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.product_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        self.product_table.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
         self.source_model = QStandardItemModel();
         self.proxy_model = NumericSortProxyModel()
         self.proxy_model.setSourceModel(self.source_model);
@@ -129,6 +126,7 @@ class InventoryPage(QWidget):
         self.add_product_button.clicked.connect(self.open_add_product_dialog)
         self.delete_product_button.clicked.connect(self.delete_selected_product)
         self.edit_product_button.clicked.connect(self.open_edit_product_dialog)
+        self.export_excel_button.clicked.connect(self._export_to_excel)
         self.product_table.selectionModel().selectionChanged.connect(self._on_selection_changed)
         self.search_input.textChanged.connect(self.filter_products)
 
@@ -137,6 +135,11 @@ class InventoryPage(QWidget):
         secili_urun = self._get_selected_product()
         self._update_preview_image(secili_urun)
         self._update_preview_barcode(secili_urun)
+
+    def update_button_states(self):
+        has_selection = self.product_table.selectionModel().hasSelection()
+        self.edit_product_button.setEnabled(has_selection)
+        self.delete_product_button.setEnabled(has_selection)
 
     def _update_preview_image(self, urun: Urun | None):
         if urun and urun.resim_yolu and os.path.exists(urun.resim_yolu):
@@ -164,11 +167,6 @@ class InventoryPage(QWidget):
             self.barcode_image_label.clear();
             self.barcode_image_label.setPixmap(QPixmap())
 
-    def update_button_states(self):
-        has_selection = self.product_table.selectionModel().hasSelection()
-        self.edit_product_button.setEnabled(has_selection)
-        self.delete_product_button.setEnabled(has_selection)
-
     def load_all_products(self):
         self._populate_table(get_all_products())
 
@@ -183,11 +181,12 @@ class InventoryPage(QWidget):
         self._urunler_cache.clear()
         self.source_model.setHorizontalHeaderLabels(
             ['ID', 'Ürün Kodu', 'Cins', 'Ayar', 'Gram', 'Maliyet', 'Stok', 'Eklenme Tarihi'])
+        warning_icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
         for urun in urunler_listesi:
             self._urunler_cache[urun.id] = urun
             item_id = QStandardItem(str(urun.id));
             item_kod = QStandardItem(urun.urun_kodu);
-            item_cins = QStandardItem(urun.cins)
+            item_cins = QStandardItem(urun.cins);
             item_tarih = QStandardItem(urun.eklenme_tarihi.strftime('%d-%m-%Y') if urun.eklenme_tarihi else "")
             item_ayar = QStandardItem();
             item_ayar.setData(str(urun.ayar), Qt.ItemDataRole.DisplayRole);
@@ -207,14 +206,24 @@ class InventoryPage(QWidget):
             item_stok.setData(urun.stok_adeti, Qt.ItemDataRole.UserRole);
             item_stok.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             row_items = [item_id, item_kod, item_cins, item_ayar, item_gram, item_maliyet, item_stok, item_tarih]
+            stok_adeti = urun.stok_adeti
+            if stok_adeti == 0:
+                color = QColor("red")
+                for item in row_items: item.setData(color, Qt.ItemDataRole.ForegroundRole)
+                item_stok.setData(warning_icon, Qt.ItemDataRole.DecorationRole)
+            elif 0 < stok_adeti < 5:
+                color = QColor("#FD7E14")
+                for item in row_items: item.setData(color, Qt.ItemDataRole.ForegroundRole)
+                item_stok.setData(warning_icon, Qt.ItemDataRole.DecorationRole)
             self.source_model.appendRow(row_items)
         self.product_table.resizeColumnsToContents();
         self.product_table.setColumnHidden(0, True)
 
-    def _get_selected_product(self) -> Urun | None:
-        indexes = self.product_table.selectionModel().selectedRows()
-        if not indexes: return None
-        proxy_index = indexes[0]
+    def _get_selected_product(self, proxy_index=None) -> Urun | None:
+        if not proxy_index:
+            indexes = self.product_table.selectionModel().selectedRows()
+            if not indexes: return None
+            proxy_index = indexes[0]
         source_index = self.proxy_model.mapToSource(proxy_index)
         product_id = int(self.source_model.item(source_index.row(), 0).text())
         return self._urunler_cache.get(product_id)
@@ -261,23 +270,85 @@ class InventoryPage(QWidget):
                 print(f"Barkod silinirken hata: {e}")
 
     def delete_selected_product(self):
-        secili_urun = self._get_selected_product()
-        if not secili_urun: return
-        cevap = QMessageBox.question(self, "Silme Onayı",
-                                     f"'{secili_urun.cins}' (ID: {secili_urun.id}) ürününü kalıcı olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!",
+        selected_rows = self.product_table.selectionModel().selectedRows()
+        if not selected_rows: QMessageBox.warning(self, "Uyarı",
+                                                  "Lütfen silmek için bir veya daha fazla ürün seçin."); return
+        urun_to_delete_list = []
+        for index in selected_rows:
+            urun = self._get_selected_product(index)
+            if urun: urun_to_delete_list.append(urun)
+        if not urun_to_delete_list: return
+        item_count = len(urun_to_delete_list)
+        onay_mesaji = (
+            f"Seçtiğiniz {item_count} ürünü kalıcı olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!")
+        cevap = QMessageBox.question(self, "Toplu Silme Onayı", onay_mesaji,
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if cevap == QMessageBox.StandardButton.Yes:
-            if delete_product(secili_urun.id):
-                self._delete_associated_files(secili_urun)
-                QMessageBox.information(self, "Başarılı", "Ürün ve ilişkili dosyaları başarıyla silindi.")
-                self.load_all_products()
-            else:
-                QMessageBox.critical(self, "Hata", "Ürün veritabanından silinirken bir hata oluştu.")
+            silinen_sayisi = 0;
+            basarisiz_sayisi = 0
+            for urun in urun_to_delete_list:
+                if delete_product(urun.id):
+                    self._delete_associated_files(urun);
+                    silinen_sayisi += 1
+                else:
+                    basarisiz_sayisi += 1
+            QMessageBox.information(self, "İşlem Tamamlandı",
+                                    f"{silinen_sayisi} adet ürün başarıyla silindi.\n{basarisiz_sayisi} adet ürün silinirken hata oluştu.")
+            self.load_all_products()
 
     def _open_purchase_dialog(self):
-        dialog = TransactionDialog(mode='alış', parent=self)
+        dialog = TransactionDialog(mode='alış', parent=self);
         if dialog.exec(): self.load_all_products()
 
     def _open_sale_dialog(self):
         dialog = TransactionDialog(mode='satış', parent=self)
         if dialog.exec(): self.load_all_products()
+
+    def _export_to_excel(self):
+        """Tüm envanter verisini bir Excel dosyasına aktarır."""
+        urunler = get_all_products()
+        if not urunler:
+            QMessageBox.information(self, "Bilgi", "Aktarılacak ürün bulunmuyor.")
+            return
+
+        # Kullanıcıya dosyayı nereye kaydedeceğini sor
+        default_filename = f"Stok_Raporu_{datetime.now().strftime('%Y-%m-%d_%H%M')}.xlsx"
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Excel Dosyasını Kaydet",
+            default_filename,
+            "Excel Dosyaları (*.xlsx)"
+        )
+
+        if save_path:
+            try:
+                workbook = openpyxl.Workbook()
+                sheet = workbook.active
+                sheet.title = "Stok Envanteri"
+
+                # Başlık satırını yaz
+                headers = ["Ürün Kodu", "Cins", "Ayar", "Gram", "Maliyet (TL)", "Satış Fiyatı (TL)", "Stok Adedi",
+                           "Eklenme Tarihi", "Açıklama"]
+                sheet.append(headers)
+
+                # Veri satırlarını yaz
+                for urun in urunler:
+                    row = [
+                        urun.urun_kodu,
+                        urun.cins,
+                        urun.ayar,
+                        urun.gram if urun.gram is not None else 0,
+                        urun.maliyet,
+                        urun.satis_fiyati,
+                        urun.stok_adeti,
+                        urun.eklenme_tarihi.strftime("%Y-%m-%d") if urun.eklenme_tarihi else "",
+                        urun.aciklama
+                    ]
+                    sheet.append(row)
+
+                workbook.save(save_path)
+
+                QMessageBox.information(self, "Başarılı", f"Envanter başarıyla şu dosyaya aktarıldı:\n{save_path}")
+
+            except Exception as e:
+                QMessageBox.critical(self, "Hata", f"Dosya aktarılırken bir hata oluştu:\n{e}")

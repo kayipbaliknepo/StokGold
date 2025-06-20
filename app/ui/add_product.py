@@ -6,16 +6,18 @@ import os
 import shutil
 import time
 import traceback
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton,
     QDialogButtonBox, QSpinBox, QHBoxLayout, QLabel, QFileDialog
 )
-from PyQt6.QtGui import QDoubleValidator
+from PySide6.QtGui import QDoubleValidator
 from app.models import Urun
-from app.utils import IMAGE_DIR, BARCODE_DIR
 from datetime import date
 import barcode
 from barcode.writer import ImageWriter
+
+from app.utils import IMAGE_DIR, BARCODE_DIR
+from app.models import Urun
 
 
 class AddProductDialog(QDialog):
@@ -31,7 +33,7 @@ class AddProductDialog(QDialog):
         self.layout = QVBoxLayout(self)
         form_layout = QFormLayout()
 
-        # Form Elemanları
+
         self.urun_kodu_input = QLineEdit()
         self.cins_input = QLineEdit()
         self.ayar_input = QSpinBox()
@@ -79,7 +81,7 @@ class AddProductDialog(QDialog):
             self.urun_kodu_input.setText(f"URUN-{int(time.time())}")
 
     def _select_image(self):
-        """Dosya seçme diyalogunu açar ve seçilen resmi işler."""
+
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Bir Resim Seçin", "", "Resim Dosyaları (*.png *.jpg *.jpeg *.bmp)"
         )

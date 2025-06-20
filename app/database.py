@@ -10,17 +10,17 @@ import os
 
 
 def get_db_connection():
-    """AppData'daki veritabanı dosyasına bağlanır."""
+
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def create_table():
-    """
-    Veritabanı bağlantısı kurar ve 'urunler' tablosunu, eğer
-    zaten mevcut değilse, Urun modeline uygun şema ile oluşturur.
-    """
+
+
+
+
     conn = None
     try:
         conn = get_db_connection()
@@ -64,7 +64,7 @@ def create_table():
             conn.close()
 
 def add_product(urun: Urun):
-    """Veritabanına yeni bir Urun nesnesi ekler."""
+
     conn = None
     try:
         conn = get_db_connection()
@@ -87,7 +87,7 @@ def add_product(urun: Urun):
 
 
 def get_all_products():
-    """Veritabanındaki tüm ürünleri Urun nesneleri listesi olarak döndürür."""
+
     conn = None
     try:
         conn = get_db_connection()
@@ -97,7 +97,7 @@ def get_all_products():
 
         urunler = []
         for row in rows:
-            # Veritabanından gelen tarihi date objesine çevir
+
             tarih_objesi = datetime.strptime(row['eklenme_tarihi'], '%Y-%m-%d').date() if row[
                 'eklenme_tarihi'] else None
 
@@ -123,7 +123,7 @@ def get_all_products():
             conn.close()
 
 def delete_product(product_id: int):
-    """Verilen ID'ye sahip ürünü veritabanından siler."""
+
     conn = None
     try:
         conn = get_db_connection()
@@ -139,7 +139,7 @@ def delete_product(product_id: int):
             conn.close()
 
 def update_product(urun: Urun):
-    """Verilen Urun nesnesine göre veritabanındaki ilgili kaydı günceller."""
+
     conn = None
     try:
         conn = get_db_connection()
@@ -171,49 +171,39 @@ def update_product(urun: Urun):
 
 
 def search_products(search_term: str):
-    """Verilen arama terimine göre ürün kodu veya cinsine göre ürünleri arar."""
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    """
+    Tüm ürünleri veritabanından çeker ve ardından Python içinde
+    Türkçe karakter uyumlu, büyük/küçük harf duyarsız filtreleme yapar.
+    """
+    # 1. Önce veritabanından TÜM ürünleri çekiyoruz.
+    # Bu fonksiyonu zaten daha önce yazmıştık.
+    all_products = get_all_products()
 
+    # Eğer arama kutusu boşsa, tüm listeyi geri döndür.
+    if not search_term:
+        return all_products
 
+    # 2. Arama terimini Python'da küçük harfe çeviriyoruz.
+    # Python'un .lower() metodu Türkçe karakterleri doğru bir şekilde işler.
+    search_term_lower = search_term.lower()
 
-        query_term = f"%{search_term}%"
+    # 3. Filtrelemeyi veritabanı yerine Python'da yapıyoruz.
+    filtered_list = []
+    for urun in all_products:
+        # Her ürünün kodunu ve cinsini de küçük harfe çevirip karşılaştırıyoruz.
+        kod_lower = urun.urun_kodu.lower()
+        cins_lower = urun.cins.lower()
 
-        # LIKE operatörü ile arama yapıyoruz. COLLATE NOCASE, büyük/küçük harf duyarsız arama yapar.
-        sql = """SELECT * FROM urunler 
-                 WHERE urun_kodu LIKE ? OR cins LIKE ? COLLATE NOCASE
-                 ORDER BY id DESC"""
+        if search_term_lower in kod_lower or search_term_lower in cins_lower:
+            filtered_list.append(urun)
 
-        cursor.execute(sql, (query_term, query_term))
-        rows = cursor.fetchall()
-
-
-        urunler = []
-        for row in rows:
-            tarih_objesi = datetime.strptime(row['eklenme_tarihi'], '%Y-%m-%d').date() if row[
-                'eklenme_tarihi'] else None
-            urunler.append(Urun(
-                id=row['id'], urun_kodu=row['urun_kodu'], cins=row['cins'], ayar=row['ayar'],
-                gram=row['gram'], maliyet=row['maliyet'], satis_fiyati=row['satis_fiyati'],
-                stok_adeti=row['stok_adeti'], aciklama=row['aciklama'], resim_yolu=row['resim_yolu'],
-                eklenme_tarihi=tarih_objesi
-            ))
-        return urunler
-
-    except sqlite3.Error as e:
-        print(f"Veritabanı hatası (search_products): {e}")
-        return []
-    finally:
-        if conn:
-            conn.close()
+    return filtered_list
 
 
 
 
 def get_total_inventory_value():
-    """Stoktaki tüm ürünlerin toplam maliyet değerini hesaplar."""
+
     conn = None
     try:
         conn = get_db_connection()
@@ -238,7 +228,7 @@ def get_total_inventory_value():
 
 
 def get_product_counts_by_type():
-    """Ürünleri cinslerine göre gruplayıp her cinsten TOPLAM STOK ADEDİNİ sayar."""
+
     conn = None
     try:
         conn = get_db_connection()
@@ -263,13 +253,13 @@ def get_product_counts_by_type():
 
 
 def get_total_grams():
-    """Stoktaki tüm ürünlerin toplam gramajını hesaplar."""
+
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Her ürünün gramını stok adedi ile çarpıp genel toplamı alırız.
+
         sql = "SELECT SUM(gram * stok_adeti) FROM urunler"
         cursor.execute(sql)
 
@@ -285,10 +275,10 @@ def get_total_grams():
 
 
 def update_stock(product_id: int, quantity_change: int):
-    """
-    Verilen ID'ye sahip ürünün stok miktarını değiştirir.
-    quantity_change pozitif ise stok artar (alış), negatif ise azalır (satış).
-    """
+
+
+
+
     conn = None
     try:
         conn = get_db_connection()
@@ -313,7 +303,7 @@ def update_stock(product_id: int, quantity_change: int):
 
 
 def log_transaction(urun_id: int, tip: str, adet: int, birim_fiyat: float):
-    """Yapılan bir alış veya satış işlemini hareketler tablosuna kaydeder."""
+
     conn = get_db_connection()
     cursor = conn.cursor()
     toplam_tutar = adet * birim_fiyat
@@ -329,19 +319,19 @@ def log_transaction(urun_id: int, tip: str, adet: int, birim_fiyat: float):
 
 
 def get_daily_summary(selected_date: str):
-    """Belirli bir tarihteki toplam alış ve satış tutarlarını döndürür."""
+
     conn = get_db_connection()
     cursor = conn.cursor()
     summary = {'alis': 0.0, 'satis': 0.0}
     try:
-        # Toplam Alış
+
         sql_alis = "SELECT SUM(toplam_tutar) FROM hareketler WHERE tip = 'Alış' AND date(tarih) = ?"
         cursor.execute(sql_alis, (selected_date,))
         result_alis = cursor.fetchone()[0]
         if result_alis:
             summary['alis'] = result_alis
 
-        # Toplam Satış
+
         sql_satis = "SELECT SUM(toplam_tutar) FROM hareketler WHERE tip = 'Satış' AND date(tarih) = ?"
         cursor.execute(sql_satis, (selected_date,))
         result_satis = cursor.fetchone()[0]
@@ -356,15 +346,15 @@ def get_daily_summary(selected_date: str):
 
 
 def get_transactions_for_date(selected_date: str):
-    """
-    Belirli bir tarihteki tüm hareketleri, ürün detaylarıyla birlikte döndürür.
-    """
+
+
+
     conn = get_db_connection()
-    # Sonuçları sözlük olarak almak için row_factory'i geçici olarak değiştiriyoruz
+
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # hareketler (h) ve urunler (u) tablolarını JOIN ile birleştiriyoruz.
+
     sql = """SELECT 
                 h.tip, 
                 h.adet, 
@@ -382,7 +372,7 @@ def get_transactions_for_date(selected_date: str):
 
     try:
         cursor.execute(sql, (selected_date,))
-        # Her satırı bir sözlüğe çevirerek liste halinde döndür
+
         return [dict(row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         print(f"Günlük hareketler alınırken hata: {e}")
@@ -390,10 +380,10 @@ def get_transactions_for_date(selected_date: str):
     finally:
         conn.close()
 def get_statistics_for_period(start_date: str, end_date: str):
-    """
-    Belirli bir tarih aralığı için satış istatistiklerini hesaplar.
-    Toplam Satış, Toplam Maliyet ve Net Kâr döndürür.
-    """
+
+
+
+
     conn = get_db_connection()
     cursor = conn.cursor()
     stats = {
@@ -403,7 +393,7 @@ def get_statistics_for_period(start_date: str, end_date: str):
     }
 
     try:
-        # 1. Belirtilen aralıktaki Toplam Satış Tutarını Hesapla
+
         sql_sales = """SELECT SUM(toplam_tutar) FROM hareketler 
                        WHERE tip = 'Satış' AND date(tarih) BETWEEN ? AND ?"""
         cursor.execute(sql_sales, (start_date, end_date))
@@ -411,7 +401,7 @@ def get_statistics_for_period(start_date: str, end_date: str):
         if total_sales_result:
             stats['total_sales'] = total_sales_result
 
-        # 2. Aynı aralıkta Satılan Malların Maliyetini Hesapla
+
         sql_cogs = """SELECT SUM(h.adet * u.maliyet) 
                       FROM hareketler h
                       JOIN urunler u ON h.urun_id = u.id
@@ -421,7 +411,7 @@ def get_statistics_for_period(start_date: str, end_date: str):
         if total_cogs_result:
             stats['total_cogs'] = total_cogs_result
 
-        # 3. Net Kârı Hesapla
+
         stats['net_profit'] = stats['total_sales'] - stats['total_cogs']
 
     except sqlite3.Error as e:
