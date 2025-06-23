@@ -19,6 +19,7 @@ class DashboardPage(QWidget):
     reports_button_clicked = Signal()
     purchase_button_clicked = Signal()
     sale_button_clicked = Signal()
+    assistant_button_clicked = Signal()
 
     # Butonlar için kullanılacak olan CSS benzeri stil şablonu
     BUTTON_STYLE = """
@@ -48,41 +49,49 @@ class DashboardPage(QWidget):
         self._connect_signals()
 
     def _setup_ui(self):
-        """Arayüz elemanlarını (logo, butonlar) oluşturur ve yerleştirir."""
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(40, 40, 40, 40)
-        main_layout.setSpacing(40)
+        main_layout.setContentsMargins(40, 40, 40, 40);
+        main_layout.setSpacing(30)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
-        # 1. Logo Alanı
         logo_label = QLabel()
         logo_pixmap = QPixmap(get_icon_path('logo.png'))
-        logo_label.setPixmap(logo_pixmap.scaled(
-            200, 200,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        ))
+        logo_label.setPixmap(logo_pixmap.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio,
+                                                Qt.TransformationMode.SmoothTransformation))
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         main_layout.addWidget(logo_label)
-        main_layout.addStretch(1)  # Logo ile butonlar arasına esnek boşluk
+        main_layout.addStretch(1)
 
-        # 2. Buton Alanı (Yatay Düzen)
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(20)
-
+        button_grid_layout = QGridLayout();
+        button_grid_layout.setSpacing(20)
         self.purchase_button = self._create_action_button("Stok Alış", "purchase.png")
         self.sale_button = self._create_action_button("Stok Satış", "sale.png")
         self.inventory_button = self._create_action_button("Stok Envanteri", "inventory.png")
         self.reports_button = self._create_action_button("Raporlar", "report.png")
+        button_grid_layout.addWidget(self.purchase_button, 0, 0)
+        button_grid_layout.addWidget(self.sale_button, 0, 1)
+        button_grid_layout.addWidget(self.inventory_button, 1, 0)
+        button_grid_layout.addWidget(self.reports_button, 1, 1)
+        main_layout.addLayout(button_grid_layout)
 
-        button_layout.addWidget(self.purchase_button)
-        button_layout.addWidget(self.sale_button)
-        button_layout.addWidget(self.inventory_button)
-        button_layout.addWidget(self.reports_button)
+        main_layout.addStretch(2)
 
-        main_layout.addLayout(button_layout)
-        main_layout.addStretch(2)  # Butonların altına daha fazla boşluk
+        ASSISTANT_BUTTON_STYLE = """
+            QPushButton {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 rgba(80, 50, 180, 255), stop:1 rgba(50, 150, 255, 255));
+                color: white; border: none; border-radius: 8px; font-size: 18px;
+                font-weight: bold; padding: 15px;
+            }
+            QPushButton:hover { background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 rgba(90, 60, 190, 255), stop:1 rgba(60, 160, 255, 255)); }
+            QPushButton:pressed { background-color: #5A3E99; }
+            QPushButton:disabled { background-color: #aaa; border: 1px solid #999; }
+        """
+        self.assistant_button = QPushButton(" Akıllı Asistan")
+        self.assistant_button.setIcon(QIcon(get_icon_path("assistant.png")))
+        self.assistant_button.setIconSize(QSize(32, 32))
+        self.assistant_button.setStyleSheet(ASSISTANT_BUTTON_STYLE)
+        main_layout.addWidget(self.assistant_button)
+        main_layout.addStretch(1)
 
     def _create_action_button(self, text: str, icon_name: str) -> QPushButton:
         """Belirtilen metin ve ikonla standart bir kontrol paneli butonu oluşturur."""
@@ -102,3 +111,4 @@ class DashboardPage(QWidget):
         self.sale_button.clicked.connect(self.sale_button_clicked.emit)
         self.inventory_button.clicked.connect(self.inventory_button_clicked.emit)
         self.reports_button.clicked.connect(self.reports_button_clicked.emit)
+        self.assistant_button.clicked.connect(self.assistant_button_clicked.emit)

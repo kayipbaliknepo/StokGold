@@ -19,3 +19,9 @@ dist/
 
 # IDE'ye özel ayar dosyaları (VS Code için)
 .vscode/
+
+# Inno Setup Çıktı Klasörünü ve Script'leri Yoksay
+/SetupCiktisi/
+StokGold Setup/
+*.zip
+*.iss

@@ -423,3 +423,20 @@ def get_statistics_for_period(start_date: str, end_date: str):
     return stats
 
 
+def get_low_stock_products(threshold: int):
+    """Stoğu verilen eşik değerinin altında olan ürünleri döndürür."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Stoğu 0'dan büyük ama eşik değerinden küçük olanları getiriyoruz
+    sql = """SELECT urun_kodu, cins, stok_adeti FROM urunler 
+             WHERE stok_adeti > 0 AND stok_adeti < ? 
+             ORDER BY stok_adeti ASC"""
+    try:
+        cursor.execute(sql, (threshold,))
+        return cursor.fetchall() # Sonuçları liste olarak döndürür
+    except sqlite3.Error as e:
+        print(f"Düşük stok sorgusu hatası: {e}")
+        return []
+    finally:
+        conn.close()
+
