@@ -20,7 +20,6 @@ class AgentWorker(QObject):
     error_occurred = Signal(str)
     finished = Signal()
 
-    # --- DEĞİŞİKLİK 1: __init__ artık 'history' parametresini de kabul ediyor ---
     def __init__(self, agent: StokGoldAgent, query: str, history: list):
         super().__init__()
         self.agent = agent
@@ -29,25 +28,11 @@ class AgentWorker(QObject):
 
     @Slot()
     def run(self):
-        """Agent'ı çalıştırır ve sonucu sinyal olarak yayınlar."""
+        """Agent'ı, sohbet geçmişiyle birlikte doğru şekilde çalıştırır."""
         try:
             print(f"Agent çalıştırılıyor... Sorgu: {self.query}")
-
-            # --- DEĞİŞİKLİK 2: Agent'ı çalıştırırken sohbet geçmişini de iletiyor ---
-            response = self.agent.run(self.query, self.history)
-
-            self.response_ready.emit(response)
-        except Exception as e:
-            print(f"AgentWorker hatası: {e}")
-            self.error_occurred.emit(str(e))
-        finally:
-            self.finished.emit()
-
-    @Slot()
-    def run(self):
-        """Agent'ı çalıştırır ve sonucu sinyal olarak yayınlar."""
-        try:
-            print(f"Agent çalıştırılıyor... Sorgu: {self.query}")
+            # Agent'ın run metodu artık 2 argüman alıyor: sorgu ve geçmiş.
+            # Çağrımız artık doğru.
             response = self.agent.run(self.query, self.history)
             self.response_ready.emit(response)
         except Exception as e:
@@ -59,18 +44,20 @@ class AgentWorker(QObject):
 
 # --- Kullanıcının Gördüğü Sohbet Penceresi ---
 class AssistantDialog(QDialog):
-    def __init__(self, model_name: str, parent=None):
+    # app/ui/assistant_dialog.py içindeki __init__ fonksiyonu
+
+    def __init__(self, parent=None):
         """
-        Diyalogu başlatır ve kullanılacak spesifik model adını parametre olarak alır.
+        Diyalogu başlatır. Artık dışarıdan bir model adı almasına gerek yoktur.
         """
         super().__init__(parent)
         self.setWindowTitle("StokGold Akıllı Asistan")
         self.resize(650, 700)
         self.setStyleSheet("background-color: #f5f5f5;")
 
-        # --- DEĞİŞİKLİK BURADA ---
-        # Agent, artık dışarıdan gelen bu spesifik model adıyla başlatılıyor.
-        self.agent = StokGoldAgent(model_name=model_name)
+        # Agent artık parametre almadan, kendi içinde kuruluyor.
+        # Kendi __init__ metodu .env dosyasından API anahtarını okuyacaktır.
+        self.agent = StokGoldAgent()
         self.chat_history = []
 
         self._setup_ui()

@@ -4,12 +4,8 @@
 
 import sys
 from PySide6.QtWidgets import QApplication
-
-
 from app.database import create_table
 from app.utils import ensure_data_dirs_exist
-
-
 from app.ui.main_app_window import MainApplicationWindow
 
 

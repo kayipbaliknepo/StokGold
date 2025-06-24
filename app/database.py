@@ -439,4 +439,13 @@ def get_low_stock_products(threshold: int):
         return []
     finally:
         conn.close()
-
+def get_product_variety_count():
+    """Veritabanındaki toplam benzersiz ürün çeşidi sayısını döndürür."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(id) FROM urunler")
+        count = cursor.fetchone()[0]
+        return count if count is not None else 0
+    finally:
+        conn.close()

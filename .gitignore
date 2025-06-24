@@ -25,3 +25,6 @@ dist/
 StokGold Setup/
 *.zip
 *.iss
+
+# Hassas bilgileri içeren .env dosyasını yoksay
+.env
