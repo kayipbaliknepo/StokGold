@@ -1,65 +1,69 @@
-# app/agent/agent_core.py (Tüm Düzeltmeleri İçeren Son Hali)
+# app/agent/agent_core.py (Gemini API ile Çalışan Nihai ve En Stabil Sürüm)
 
 import os
 import traceback
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
+
+# Groq yerine Google Generative AI import ediyoruz
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain.memory import ConversationBufferWindowMemory
 
-# Kendi oluşturduğumuz araçları import ediyoruz
 from . import tools
 
-# Agent'ımızın kullanabileceği araçların listesi
+# Araç listemiz aynı kalıyor, çünkü araçlar modelden bağımsızdır.
+# Önceki adımlardaki gibi tüm araçların (hesap makinesi dahil) burada olduğundan emin olun.
 AGENT_TOOLS = [
-    tools.stok_guncelle, # <-- YENİ VE EN SPESİFİK ARACIMIZ
-    tools.get_stock_count_for_product,
-    tools.add_new_product,
+    tools.hesap_makinesi,
+    tools.stok_bilgisi_ver,
+    tools.urun_detaylarini_getir,
+    tools.satis_kari_hesapla,
     tools.get_inventory_summary,
-    tools.urun_ara,
     tools.dusuk_stok_raporu,
-    tools.kar_zarar_raporu
+    tools.kar_zarar_raporu,
+    tools.stok_guncelle,
+    tools.add_new_product,
 ]
+
 
 class StokGoldAgent:
     """
-    LangChain ve Groq API'sini kullanarak envanterle ilgili soruları yanıtlayan ana Agent sınıfı.
+    LangChain ve Google Gemini API'sini kullanarak envanterle ilgili soruları yanıtlayan
+    yüksek stabiliteye sahip Agent sınıfı.
     """
 
-    def __init__(self):  # <-- Artık dışarıdan 'model_name' parametresi almıyor
-        print("StokGold Agent (Groq) başlatılıyor...")
-
-        # 1. API Anahtarını .env dosyasından güvenli bir şekilde yükle
+    def __init__(self):
+        print("StokGold Agent (Google Gemini) başlatılıyor...")
         load_dotenv()
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key = os.getenv("GOOGLE_API_KEY")  # <-- Google API anahtarını okuyoruz
         if not api_key:
-            raise ValueError("GROQ_API_KEY bulunamadı. Lütfen projenizin ana dizinindeki .env dosyasını kontrol edin.")
+            raise ValueError("GOOGLE_API_KEY bulunamadı. Lütfen .env dosyasını kontrol edin.")
 
-        # 2. LLM'i ChatGroq olarak, model adı sabit olacak şekilde tanımla
-        self.llm = ChatGroq(
-            groq_api_key=api_key,
-            model_name="llama3-70b-8192"
+        # LLM olarak ChatGroq yerine ChatGoogleGenerativeAI kullanıyoruz
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash-latest",
+            google_api_key=api_key,
+            temperature=0,
+            # Bu satır, sistem prompt'umuzun Gemini ile uyumlu çalışmasını sağlar. Önemlidir.
+            convert_system_message_to_human=True
         )
 
-        # 3. Prompt ve Agent kurulumu aynı kalıyor...
+        # En son geliştirdiğimiz stabil prompt'u kullanıyoruz
         prompt_template = """
-        Sen bir kuyumcu envanter yönetimi asistanısın. Görevin, sana verilen araçları kullanarak kullanıcının sorularını yanıtlamaktır. Cevapların her zaman Türkçe ve net olsun.
+        Sen, StokGold programı için geliştirilmiş, uzman bir kuyumcu envanter yönetimi asistanısın.
+        Görevin, kullanıcının sorularını, sana verilen araçları en verimli ve doğru şekilde kullanarak yanıtlamaktır.
 
-        İşlem adımların şunlar olmalı:
-        1. Kullanıcının sorusunu ve sohbet geçmişini analiz et.
-        2. Soruyu cevaplamak için hangi aracı kullanman gerektiğine karar ver.
-        3. Aracı çalıştır ve sonucunu al.
-        4. ÖNEMLİ KURAL: Eğer bu sonuç kullanıcının sorusunu doğrudan yanıtlıyorsa, görevin tamamlanmıştır. KESİNLİKLE başka bir araç çağırma. Sadece bu sonucu kullanarak kullanıcıya nihai cevabını ver.
+        **KARAR VERME KURALLARIN:**
+        1.  **En Uygun Aracı Seç:** Bir soruyu cevaplamak için her zaman en basit ve en direkt aracı tercih et.
+        2.  **Sayısal Hesaplama Yap:** Fark, toplam gibi basit matematiksel işlemler yapman gerektiğinde, önce gerekli sayısal verileri diğer araçlarla topla, sonra bu sayıları `hesap_makinesi` aracına vererek sonucu bul.
+        3.  **Bilgiyi Al ve Dur:** Bir aracın çıktısı soruyu cevaplamak için yeterliyse, görevinin bittiğini anla ve kullanıcıya son cevabını ver.
+        4.  **Güvenliği Sağla:** Veritabanını değiştiren araçları sadece kullanıcıdan açık bir komut geldiğinde kullan.
 
-        Sohbet Geçmişi:
-        {chat_history}
+        Cevapların daima profesyonel, net ve Türkçe olsun.
 
-        Kullanıcının Sorusu:
-        {input}
-
-        Düşünce ve Araç Kullanım Adımların:
-        {agent_scratchpad}
+        Sohbet Geçmişi: {chat_history}
+        Kullanıcının Sorusu: {input}
+        Düşünce ve Araç Kullanım Adımların: {agent_scratchpad}
         """
         self.prompt = ChatPromptTemplate.from_template(prompt_template)
 
@@ -69,24 +73,25 @@ class StokGoldAgent:
             agent=agent,
             tools=AGENT_TOOLS,
             verbose=True,
-            handle_parsing_errors=True,
-            max_iterations=5
+            handle_parsing_errors="Lütfen tekrar dener misin, isteğini anlayamadım.",
+            max_iterations=8  # Çok adımlı görevler için biraz daha fazla iterasyon hakkı
         )
-        print("StokGold Agent (Groq) başarıyla yüklendi.")
+        print("StokGold Agent (Google Gemini) başarıyla yüklendi.")
 
     def run(self, user_query: str, chat_history: list = None) -> str:
-        """
-        Kullanıcıdan gelen sorguyu ve sohbet geçmişini alır, agent'ı çalıştırır.
-        """
+        # Bu fonksiyon aynı kalabilir
         if chat_history is None:
             chat_history = []
         try:
-            # Sohbet geçmişi artık burada, invoke içinde gönderiliyor.
             response = self.agent_executor.invoke({
                 "input": user_query,
                 "chat_history": chat_history
             })
-            return response.get('output', "Bir hata oluştu, cevap alınamadı.")
+            return response.get('output', "Üzgünüm, bir cevap oluşturamadım.")
         except Exception as e:
-            print(f"Agent çalışırken bir hata oluştu: {traceback.format_exc()}")
-            return f"Üzgünüm, API isteği sırasında bir hata oluştu: {e}"
+            error_message = f"Agent çalışırken bir hata oluştu: {e}"
+            print(f"{error_message}\n--- Traceback ---\n{traceback.format_exc()}")
+            return "Üzgünüm, beklenmedik bir hata oluştu. Detaylar konsola yazdırıldı."
+
+
+

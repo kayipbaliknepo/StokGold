@@ -1,21 +1,16 @@
-# app/ui/assistant_dialog.py
-
+import traceback
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QTextEdit, QLineEdit,
-    QPushButton, QHBoxLayout, QApplication
+    QPushButton, QHBoxLayout, QApplication, QLabel
 )
 from PySide6.QtGui import QFont, QTextCursor
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QThread, Signal, Slot, Qt
 
-# Agent çekirdeğimizi import ediyoruz
 from app.agent.agent_core import StokGoldAgent
 
 
-# --- Arka Planda Çalışacak Olan İşçi Sınıfı ---
 class AgentWorker(QObject):
-    """
-    Zaman alan LLM sorgusunu arayüzü dondurmadan arka planda çalıştırır.
-    """
+    """Zaman alan LLM sorgusunu arayüzü dondurmadan arka planda çalıştırır."""
     response_ready = Signal(str)
     error_occurred = Signal(str)
     finished = Signal()
@@ -28,35 +23,30 @@ class AgentWorker(QObject):
 
     @Slot()
     def run(self):
-        """Agent'ı, sohbet geçmişiyle birlikte doğru şekilde çalıştırır."""
+        """Agent'ı, sohbet geçmişiyle birlikte çalıştırır."""
         try:
             print(f"Agent çalıştırılıyor... Sorgu: {self.query}")
-            # Agent'ın run metodu artık 2 argüman alıyor: sorgu ve geçmiş.
-            # Çağrımız artık doğru.
             response = self.agent.run(self.query, self.history)
             self.response_ready.emit(response)
         except Exception as e:
-            print(f"AgentWorker hatası: {e}")
-            self.error_occurred.emit(str(e))
+            # Hata mesajını string'e çevirerek gönder
+            error_msg = f"Bir hata oluştu: {e}"
+            print(f"AgentWorker hatası: {error_msg}")
+            self.error_occurred.emit(error_msg)
         finally:
             self.finished.emit()
 
 
-# --- Kullanıcının Gördüğü Sohbet Penceresi ---
 class AssistantDialog(QDialog):
-    # app/ui/assistant_dialog.py içindeki __init__ fonksiyonu
+    """Kullanıcının Akıllı Asistan ile konuştuğu sohbet penceresi."""
 
     def __init__(self, parent=None):
-        """
-        Diyalogu başlatır. Artık dışarıdan bir model adı almasına gerek yoktur.
-        """
         super().__init__(parent)
         self.setWindowTitle("StokGold Akıllı Asistan")
-        self.resize(650, 700)
+        self.resize(600, 650)
         self.setStyleSheet("background-color: #f5f5f5;")
 
-        # Agent artık parametre almadan, kendi içinde kuruluyor.
-        # Kendi __init__ metodu .env dosyasından API anahtarını okuyacaktır.
+        # Agent, parametre almadan kendi içinde kuruluyor.
         self.agent = StokGoldAgent()
         self.chat_history = []
 
@@ -65,19 +55,17 @@ class AssistantDialog(QDialog):
     def _setup_ui(self):
         layout = QVBoxLayout(self)
 
-        # Sohbet geçmişinin gösterileceği alan
         self.history_display = QTextEdit()
         self.history_display.setReadOnly(True)
         self.history_display.setFont(QFont("Arial", 12))
         self.history_display.setStyleSheet("background-color: white; border: 1px solid #ddd;")
         layout.addWidget(self.history_display)
 
-        # Yazı giriş alanı ve gönder butonu
         input_layout = QHBoxLayout()
         self.input_line = QLineEdit()
         self.input_line.setPlaceholderText("Sorunuzu buraya yazın...")
         self.input_line.setFont(QFont("Arial", 12))
-        self.input_line.returnPressed.connect(self._send_message)  # Enter'a basınca gönder
+        self.input_line.returnPressed.connect(self._send_message)
 
         self.send_button = QPushButton("Gönder")
         self.send_button.setFont(QFont("Arial", 11, QFont.Weight.Bold))
@@ -87,36 +75,41 @@ class AssistantDialog(QDialog):
         input_layout.addWidget(self.send_button)
         layout.addLayout(input_layout)
 
+        self.status_label = QLabel()
+        self.status_label.setFont(QFont("Arial", 10, italic=True))
+        self.status_label.setStyleSheet("color: #666;")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.status_label)
+
         self.append_message("<b>Asistan:</b> Merhaba! StokGold envanterinizle ilgili size nasıl yardımcı olabilirim?",
                             "assistant")
 
     def append_message(self, message: str, role: str):
         """Sohbet ekranına yeni bir mesaj ekler."""
         if role == "user":
-            formatted_message = f"<p style='margin: 5px; text-align: right; color: #0055A4;'>{message}</p>"
-        else:  # assistant
-            formatted_message = f"<p style='margin: 5px; color: #333;'>{message}</p>"
+            # Kullanıcı mesajları için HTML formatı
+            formatted_message = f"<p style='margin-bottom: 10px; text-align: right; color: #0055A4;'>{message}</p>"
+        else:  # Asistan mesajları için
+            formatted_message = f"<p style='margin-bottom: 10px; color: #333;'>{message}</p>"
 
-        self.history_display.insertHtml(formatted_message)
-        self.history_display.moveCursor(QTextCursor.MoveOperation.End)  # Otomatik aşağı kaydır
+        self.history_display.append(formatted_message)
+        self.history_display.moveCursor(QTextCursor.MoveOperation.End)
 
     @Slot()
     def _send_message(self):
-        """Kullanıcının yazdığı mesajı alır ve agent'ı arka planda çalıştırmak üzere tetikler."""
+        """Kullanıcının yazdığı mesajı alır ve agent'ı arka planda çalıştırır."""
         user_text = self.input_line.text().strip()
-        if not user_text:
+        if not user_text or not self.send_button.isEnabled():
             return
 
         self.append_message(f"<b>Siz:</b> {user_text}", "user")
         self.input_line.clear()
 
-        # Kullanıcı yeni bir soru sorarken tekrar soru sormasını engelle
         self.input_line.setEnabled(False)
         self.send_button.setEnabled(False)
-        self.append_message("<b>Asistan:</b> Düşünüyorum...", "assistant")
-        QApplication.processEvents()  # "Düşünüyorum..." mesajının hemen görünmesini sağla
+        self.status_label.setText("Asistan düşünüyor...")
+        QApplication.processEvents()
 
-        # Arka plan iş parçacığını oluştur ve çalıştır
         self.thread = QThread()
         self.worker = AgentWorker(self.agent, user_text, self.chat_history)
         self.worker.moveToThread(self.thread)
@@ -133,25 +126,22 @@ class AssistantDialog(QDialog):
 
     def _handle_agent_response(self, response: str):
         """Agent'tan cevap geldiğinde çağrılır."""
-        # "Düşünüyorum..." mesajını sil
-        cursor = self.history_display.textCursor()
-        cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
-        cursor.removeSelectedText()
+        self.status_label.clear()
 
-        # Gerçek cevabı ekle
         self.append_message(f"<b>Asistan:</b> {response}", "assistant")
 
-        # Sohbet geçmişini güncelle
-        self.chat_history.append((self.worker.query, response))
+        # Sohbet geçmişini (hem kullanıcının sorusu hem de agent'ın cevabı) güncelle
+        last_query = self.worker.query
+        self.chat_history.append((last_query, response))
 
-        # Giriş alanlarını tekrar aktif et
-        self.input_line.setEnabled(True)
-        self.send_button.setEnabled(True)
+        self.input_line.setEnabled(True);
+        self.send_button.setEnabled(True);
         self.input_line.setFocus()
 
     def _handle_agent_error(self, error_message: str):
         """Agent'ta bir hata oluştuğunda çağrılır."""
+        self.status_label.clear()
         self.append_message(f"<b>Hata:</b> {error_message}", "assistant")
-        self.input_line.setEnabled(True)
-        self.send_button.setEnabled(True)
+        self.input_line.setEnabled(True);
+        self.send_button.setEnabled(True);
         self.input_line.setFocus()

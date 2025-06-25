@@ -1,0 +1,107 @@
+# app/agent/agent_core.py (Tüm Düzeltmeleri İçeren Nihai ve Stabil Sürüm)
+
+import os
+import traceback
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+
+# Tüm gelişmiş araçlarımızı import ediyoruz
+from . import tools
+
+# Agent'ımızın kullanabileceği, tam ve rafine araç listesi
+# Bu listenin çalışması için tools.py dosyasının önceki adımlardaki
+# gibi güncellenmiş olması gerekir.
+AGENT_TOOLS = [
+    tools.stok_bilgisi_ver,
+    tools.urun_detaylarini_getir,
+    tools.satis_kari_hesapla,
+    tools.get_inventory_summary,
+    tools.dusuk_stok_raporu,
+    tools.kar_zarar_raporu,
+    tools.stok_guncelle,
+    tools.add_new_product,
+]
+
+class StokGoldAgent:
+    """
+    LangChain ve Groq API'sini kullanarak envanterle ilgili soruları yanıtlayan
+    gelişmiş ve stabil Agent sınıfı.
+    """
+    def __init__(self):
+        print("StokGold Agent (Groq) başlatılıyor...")
+        load_dotenv()
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY bulunamadı. Lütfen .env dosyasını kontrol edin.")
+
+        # ChatGroq modelini doğru parametrelerle başlatıyoruz
+        self.llm = ChatGroq(
+            groq_api_key=api_key,
+            model_name="llama3-70b-8192",
+            temperature=0 # Daha öngörülebilir ve tutarlı sonuçlar için sıcaklığı düşürüyoruz
+        )
+
+        # --- NİHAİ SİSTEM PROMPT'U ---
+        # Bu prompt, tüm hatalardan öğrendiğimiz dersleri içerir.
+        prompt_template = """
+        Sen, StokGold programı için geliştirilmiş, uzman bir kuyumcu envanter yönetimi asistanısın.
+        Görevin, kullanıcının sorularını, sana verilen araçları en verimli ve doğru şekilde kullanarak yanıtlamaktır.
+
+        **KARAR VERME KURALLARIN:**
+        1.  **En Uygun Aracı Seç:** Bir soruyu cevaplamak için her zaman en basit ve en direkt aracı tercih et. Örneğin, kullanıcı SADECE stok adedi soruyorsa, `stok_bilgisi_ver` aracını kullan. Daha fazla detay (maliyet, satış fiyatı vb.) gerekmiyorsa, daha karmaşık olan `urun_detaylarini_getir` aracını kullanma.
+
+        2.  **Bilgiyi Al ve Dur:** Bir aracı kullandıktan sonra, eğer aracın çıktısı kullanıcının sorusunu cevaplamak için yeterliyse, görevinin bittiğini anla. KESİNLİKLE başka bir araç çağırma. Hemen bu bilgiyi kullanarak kullanıcıya son ve net cevabını ver.
+
+        3.  **Belirsizliği Gider:** Bir arama yaptığında birden fazla sonuç alırsan, devam etmeden önce kullanıcıya bir liste sunarak hangi ürünü kastettiğini sor ve netleştirme iste.
+
+        4.  **Güvenliği Sağla:** Veritabanını değiştiren araçları (`add_new_product`, `stok_guncelle`) SADECE kullanıcıdan "ekle", "satıldı", "güncelle", "kaydet" gibi açık ve net bir komut geldiğinde kullan. Emin olmadığın durumlarda, işlemi yapmadan önce kullanıcıya onaylat. Örneğin: "Yeni bir ürün eklemek istediğinizden emin misiniz?
+        
+        5.  **Cevaplarından Emin ol:** Eğer sana şu ürünle bu ürün arasındaki matematiksel fark gibi işlemler soruluyorsa, gerekli araçları kullan ve kendin işlemler yapıp cevabı ver.
+        
+        6.  **Bir geri dönüş sağla:** Cevabından emin olamadıysan, 'Ne demek istediğini anlayamadım, daha açıklayıcı olur musunuz?' gibi bir cümle kur ama asla cevapsız bırakma."
+        
+
+        Cevapların daima profesyonel, net ve Türkçe olsun.
+
+        **Sohbet Geçmişi:**
+        {chat_history}
+
+        **Kullanıcının Sorusu:**
+        {input}
+
+        **Düşünce ve Araç Kullanım Adımların:**
+        {agent_scratchpad}
+        """
+        self.prompt = ChatPromptTemplate.from_template(prompt_template)
+
+        # Agent ve Executor'ı oluşturuyoruz
+        agent = create_tool_calling_agent(self.llm, AGENT_TOOLS, self.prompt)
+
+        self.agent_executor = AgentExecutor(
+            agent=agent,
+            tools=AGENT_TOOLS,
+            verbose=True,
+            handle_parsing_errors="Lütfen tekrar dener misin, isteğini anlayamadım.", # Hata durumunda kullanıcıya dostça bir mesaj
+            max_iterations=5 # Sonsuz döngüye karşı son sigorta
+        )
+        print("StokGold Agent (Groq) başarıyla yüklendi.")
+
+    def run(self, user_query: str, chat_history: list = None) -> str:
+        """
+        Kullanıcıdan gelen sorguyu ve sohbet geçmişini alır, agent'ı çalıştırır.
+        """
+        if chat_history is None:
+            chat_history = []
+        try:
+            response = self.agent_executor.invoke({
+                "input": user_query,
+                "chat_history": chat_history
+            })
+            # Agent'ın çıktısını doğrudan döndürüyoruz
+            return response.get('output', "Üzgünüm, bir cevap oluşturamadım.")
+        except Exception as e:
+            error_message = f"Agent çalışırken bir hata oluştu: {e}"
+            print(f"{error_message}\n--- Traceback ---\n{traceback.format_exc()}")
+            return "Üzgünüm, beklenmedik bir hata oluştu. Detaylar konsola yazdırıldı."
