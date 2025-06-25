@@ -27,7 +27,7 @@ StokGold is a modern desktop inventory management application for jewelers. This
 * **Language:** Python 3.11
 * **GUI Framework:** PySide6
 * **AI Framework:** LangChain
-* **LLM Service:** Groq API (using Llama 3 70B)
+* **LLM Service:** Gemini API (using 2.5-flash)
 * **Database:** SQLite
 * **Key Libraries:** `python-dotenv`, `langchain-groq`, `openpyxl`, `python-barcode`
 
@@ -37,9 +37,9 @@ StokGold is a modern desktop inventory management application for jewelers. This
 
 ### For End-Users (Note: AI feature is unstable)
 
-1.  **Get a Groq API Key:** To use the Smart Assistant, you must first get a free API key from [groq.com](https://groq.com).
-2.  **Create `.env` file:** Create a file named `.env` in the installation directory and add your key like this: `GROQ_API_KEY="gsk_YourActualKey"`
-3.  **Install:** Run the `StokGold-Kurulum.exe` from the "Releases" section.
+1.  **Get a Gemini API Key:** To use the Smart Assistant, you must first get a free API key from Gemini
+2.  **Create `.env` file:** Create a file named `.env` in the installation directory and add your key like this: `Gemini_API_KEY="AIYourActualKey"`
+
 
 ### For Developers
 
@@ -48,7 +48,7 @@ StokGold is a modern desktop inventory management application for jewelers. This
     git clone [https://github.com/kayipbaliknepo/StokGold.git](https://github.com/kayipbaliknepo/StokGold.git)
     cd StokGold
     ```
-2.  **Create `.env` file:** Create a `.env` file in the root directory and add your Groq API key: `GROQ_API_KEY="gsk_YourActualKey"`.
+2.  **Create `.env` file:** Create a `.env` file in the root directory and add your Gemini API key: `Gemini_API_KEY="YourActualKey"`.
 3.  **Create and activate the virtual environment:**
     ```bash
     py -3.11 -m venv venv
