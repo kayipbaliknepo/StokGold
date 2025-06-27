@@ -80,30 +80,34 @@ class InventoryPage(QWidget):
             QLineEdit:focus { border: 1px solid #4A90E2; }
         """
         TABLE_STYLE = """
-            QTableView {
-                background-color: white;
-                border: 1px solid #E5E7EB;
-                border-radius: 8px;
-                gridline-color: #F3F4F6;
-                font-size: 14px;
-                selection-behavior: SelectRows;
-            }
-            QTableView::item { padding: 10px 8px; border-bottom: 1px solid #F3F4F6; }
-            QTableView::item:selected {
-                background-color: #EBF5FF;
-                color: #1E3A8A;
-            }
-            QHeaderView::section {
-                background-color: #F9FAFB;
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-                border-bottom: 1px solid #E5E7EB;
-                padding: 10px 8px;
-                font-size: 13px;
-                font-weight: bold;
-                color: #374151;
-            }
-        """
+                    QTableView {
+                        background-color: white;
+                        border: 1px solid #E5E7EB;
+                        border-radius: 8px;
+                        gridline-color: #F3F4F6;
+                        font-size: 14px;
+                        selection-behavior: SelectRows;
+                    }
+                    QTableView::item {
+                        padding: 8px; /* Dikey boşluğu biraz azalttık */
+                        border-bottom: 1px solid #F3F4F6;
+                        min-height: 25px; /* <-- DEĞİŞİKLİK BURADA: Her satır için minimum yükseklik */
+                    }
+                    QTableView::item:selected {
+                        background-color: #EBF5FF;
+                        color: #1E3A8A;
+                    }
+                    QHeaderView::section {
+                        background-color: #F9FAFB;
+                        border-top-left-radius: 8px;
+                        border-top-right-radius: 8px;
+                        border-bottom: 1px solid #E5E7EB;
+                        padding: 10px 8px;
+                        font-size: 13px;
+                        font-weight: bold;
+                        color: #374151;
+                    }
+                """
         PREVIEW_FRAME = """
             QFrame#PreviewFrame {
                 background-color: white;
@@ -238,6 +242,7 @@ class InventoryPage(QWidget):
         self.product_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.product_table.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
         self.product_table.verticalHeader().setVisible(False)
+
         self.product_table.horizontalHeader().setStretchLastSection(True)
         self.product_table.horizontalHeader().setHighlightSections(False)
 
