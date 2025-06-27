@@ -15,7 +15,7 @@ class Urun:
     ayar: int = 22
     gram: Optional[float] = None  # <-- float ya da None olabilir ve varsayılanı None.
     maliyet: float = 0.0
-    # ... (kalan alanlar aynı)
+
     satis_fiyati: float = 0.0
     stok_adeti: int = 1
     aciklama: str = ""
