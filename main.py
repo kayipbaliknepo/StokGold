@@ -8,7 +8,6 @@ from app.database import create_table
 from app.utils import ensure_data_dirs_exist
 from app.ui.main_app_window import MainApplicationWindow
 
-
 def main():
     """Uygulamanın ana giriş noktası."""
 
@@ -18,7 +17,6 @@ def main():
     window = MainApplicationWindow()
     window.show()
     sys.exit(app.exec())
-
 
 if __name__ == '__main__':
     main()

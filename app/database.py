@@ -18,9 +18,6 @@ def get_db_connection():
 
 def create_table():
 
-
-
-
     conn = None
     try:
         conn = get_db_connection()
@@ -200,8 +197,6 @@ def search_products(search_term: str):
     return filtered_list
 
 
-
-
 def get_total_inventory_value():
 
     conn = None
@@ -209,10 +204,8 @@ def get_total_inventory_value():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-
         sql = "SELECT SUM(maliyet * stok_adeti) FROM urunler"
         cursor.execute(sql)
-
 
         result = cursor.fetchone()[0]
 
@@ -251,7 +244,6 @@ def get_product_counts_by_type():
             conn.close()
 
 
-
 def get_total_grams():
 
     conn = None
@@ -275,8 +267,6 @@ def get_total_grams():
 
 
 def update_stock(product_id: int, quantity_change: int):
-
-
 
 
     conn = None
@@ -348,7 +338,6 @@ def get_daily_summary(selected_date: str):
 def get_transactions_for_date(selected_date: str):
 
 
-
     conn = get_db_connection()
 
     conn.row_factory = sqlite3.Row
@@ -380,10 +369,6 @@ def get_transactions_for_date(selected_date: str):
     finally:
         conn.close()
 def get_statistics_for_period(start_date: str, end_date: str):
-
-
-
-
     conn = get_db_connection()
     cursor = conn.cursor()
     stats = {

@@ -1,3 +1,7 @@
+# MIT License
+# Copyright (c) 2025 Aykut Yahya Ay
+# See LICENSE file for full license details.
+
 import traceback
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QTextEdit, QLineEdit,
