@@ -1,5 +1,3 @@
-# app/agent/agent_core.py (Gemini API ile Çalışan Nihai ve En Stabil Sürüm)
-
 import os
 import traceback
 from dotenv import load_dotenv
@@ -14,15 +12,16 @@ from . import tools
 # Araç listemiz aynı kalıyor, çünkü araçlar modelden bağımsızdır.
 # Önceki adımlardaki gibi tüm araçların (hesap makinesi dahil) burada olduğundan emin olun.
 AGENT_TOOLS = [
-    tools.hesap_makinesi,
-    tools.stok_bilgisi_ver,
+    tools.gunluk_islem_detaylari_getir, # <-- YENİ VE DAHA AKILLI ARACIMIZ
+    tools.stok_guncelle,
+    tools.get_stock_count_for_product,
+    tools.add_new_product,
+    tools.get_inventory_summary,
     tools.urun_detaylarini_getir,
     tools.satis_kari_hesapla,
-    tools.get_inventory_summary,
+    tools.hesap_makinesi,
     tools.dusuk_stok_raporu,
     tools.kar_zarar_raporu,
-    tools.stok_guncelle,
-    tools.add_new_product,
 ]
 
 
