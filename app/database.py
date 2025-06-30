@@ -434,3 +434,43 @@ def get_product_variety_count():
         return count if count is not None else 0
     finally:
         conn.close()
+
+def get_latest_products(limit: int = 5):
+    """Veritabanına en son eklenen ürünleri belirli bir limitte döndürür."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # ID'ye göre tersten sıralayıp ilk 'limit' kadarını alıyoruz.
+    sql = "SELECT cins, urun_kodu FROM urunler ORDER BY id DESC LIMIT ?"
+    try:
+        cursor.execute(sql, (limit,))
+        # Sonuçları [('Cins', 'Kod'), ...] formatında liste olarak döndürür
+        return cursor.fetchall()
+    except sqlite3.Error as e:
+        print(f"Son eklenen ürünler sorgusu hatası: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_top_profitable_products(limit: int = 1):
+    """
+    Potansiyel kârı (mevcut stok ve fiyatlara göre) en yüksek olan ürünleri döndürür.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Not: Bu sorgu, satılmış kârı değil, mevcut stok satılırsa elde edilecek potansiyel kârı hesaplar.
+    sql = """
+        SELECT cins, (satis_fiyati - maliyet) * stok_adeti AS potansiyel_kar
+        FROM urunler
+        WHERE satis_fiyati > 0 AND maliyet > 0 AND stok_adeti > 0
+        ORDER BY potansiyel_kar DESC
+        LIMIT ?
+    """
+    try:
+        cursor.execute(sql, (limit,))
+        return cursor.fetchall()
+    except sqlite3.Error as e:
+        print(f"En karlı ürün sorgusu hatası: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()

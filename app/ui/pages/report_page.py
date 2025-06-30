@@ -2,12 +2,13 @@
 # Copyright (c) 2025 Aykut Yahya Ay
 # See LICENSE file for full license details.
 
+import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QHeaderView,
     QFrame, QTabWidget, QCalendarWidget, QGridLayout, QHBoxLayout, QDateEdit
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QIcon
-from PySide6.QtCore import Qt, QDate, QSize
+from PySide6.QtCore import Qt, QDate, QSize, QEvent
 
 from ..daily_detail_dialog import DailyDetailDialog
 from ...utils import get_icon_path
@@ -18,58 +19,56 @@ from ...database import (
 
 
 class ReportPage(QWidget):
-    """
-    Modern bir tasarıma sahip, sekmeli raporlama sayfası.
-    """
+    """Modern bir tasarıma sahip, sekmeli raporlama sayfası."""
 
     class Styles:
         """Tüm arayüz stillerini merkezi olarak yöneten sınıf."""
         PAGE_BACKGROUND = "background-color: #F4F7FC;"
         TAB_WIDGET = """
             QTabWidget::pane {
-                border: 1px solid #E5E7EB;
-                border-radius: 8px;
+                border: none;
+                border-top: 1px solid #E5E7EB;
                 background-color: white;
             }
             QTabBar::tab {
-                background-color: #F3F4F6;
+                background-color: #F9FAFB;
                 border: 1px solid #E5E7EB;
-                border-bottom-color: #E5E7EB; 
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                min-width: 150px;
-                padding: 10px;
+                border-bottom: none; 
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                min-width: 180px;
+                font-size: 14px;
+                padding: 12px 20px;
                 font-weight: bold;
-                color: #4B5563;
+                color: #6B7280;
             }
-            QTabBar::tab:selected, QTabBar::tab:hover {
+            QTabBar::tab:selected {
                 background-color: white;
-                border-color: #E5E7EB;
-                border-bottom-color: white; /* Alttaki çizgiyi kaldırır */
+                color: #1F2937;
+            }
+            QTabBar::tab:!selected:hover {
+                background-color: #F0F2F5;
             }
         """
         CALENDAR_STYLE = """
-            QCalendarWidget { background-color: white; border: none; }
             QCalendarWidget QToolButton {
                 height: 40px; font-size: 14px; color: #333;
-                background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 5px;
+                background-color: #ffffff; border: 1px solid #dcdcdc; border-radius: 5px;
             }
-            QCalendarWidget QToolButton:hover { background-color: #e9ecef; }
-            QCalendarWidget QTableView {
-                selection-background-color: #4A90E2; /* Mavi seçim rengi */
-                selection-color: white;
-            }
+            QCalendarWidget QToolButton:hover { background-color: #f0f0f0; }
+            QCalendarWidget QTableView { selection-background-color: #4A90E2; selection-color: white; }
             QCalendarWidget QHeaderView::section {
-                background-color: #F9FAFB; padding: 6px;
+                background-color: #F9FAFB; padding: 8px;
                 border: none; font-weight: bold; color: #374151;
             }
             QCalendarWidget #qt_calendar_calendarview::item#today {
-                background-color: #EBF5FF; border: 1px solid #B3D7FF; color: #0056b3;
+                outline: 2px solid #80bdff;
+                color: #0056b3;
             }
         """
-        FRAME_STYLE = "background-color: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px;"
-        TITLE_LABEL = "font-size: 16px; font-weight: bold; color: #1F2937;"
-        STATS_LABEL = "font-size: 18pt;"
+        FRAME_STYLE = "background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 8px; padding: 20px;"
+        TITLE_LABEL = "font-size: 12pt; color: #6B7280;"
+        STATS_LABEL = "font-size: 22pt; font-weight: bold;"
         BUTTON_PRIMARY = """
             QPushButton {
                 background-color: #4A90E2; color: white; border: none;
@@ -78,34 +77,63 @@ class ReportPage(QWidget):
             QPushButton:hover { background-color: #4281CB; }
         """
         TABLE_STYLE = """
-            QTableView {
-                background-color: white; border: none;
-                gridline-color: #F3F4F6; font-size: 14px;
-            }
-            QTableView::item { padding: 10px 8px; border-bottom: 1px solid #F3F4F6; }
+            QTableView { background-color: white; border: none; gridline-color: #F3F4F6; font-size: 14px; }
+            QTableView::item { padding: 10px 8px; border-bottom: 1px solid #F3F4F6; min-height: 25px; }
             QTableView::item:selected { background-color: #EBF5FF; color: #1E3A8A; }
             QHeaderView::section {
-                background-color: #F9FAFB; border: none; border-bottom: 1px solid #E5E7EB;
-                padding: 10px 8px; font-weight: bold; color: #374151;
+                background-color: #F9FAFB; border: none; border-bottom: 2px solid #E5E7EB;
+                padding: 12px 8px; font-weight: bold; color: #374151;
             }
         """
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet(self.Styles.PAGE_BACKGROUND)
-
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
-
         self.tabs = QTabWidget()
         self.tabs.setStyleSheet(self.Styles.TAB_WIDGET)
 
-        # Sekmeleri oluştur ve ekle
         self._create_statistics_tab()
         self._create_daily_activity_tab()
         self._create_inventory_summary_tab()
 
         self.layout.addWidget(self.tabs)
+
+    def eventFilter(self, source, event):
+        """Takvim üzerindeki fare tekerleği olaylarını yakalar ve engeller."""
+        # Takvimin içindeki herhangi bir widget'tan gelen tekerlek olayını engelle
+        if event.type() == QEvent.Type.Wheel and source.parent() == self.calendar:
+            return True
+        return super().eventFilter(source, event)
+
+    def _create_daily_activity_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(25, 25, 25, 25)
+
+        self.calendar = QCalendarWidget()
+        self.calendar.setStyleSheet(self.Styles.CALENDAR_STYLE)
+
+        # 1. Sol taraftaki hafta numarası sütununu gizle
+        self.calendar.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
+
+        # 2. Fare tekerleği olaylarını engellemek için takvime ve alt bileşenlerine olay filtresi kur
+        self.calendar.installEventFilter(self)
+        for child in self.calendar.findChildren(QWidget):
+            child.installEventFilter(self)
+
+        self.calendar.clicked.connect(self._open_daily_detail_dialog)
+
+        info_label = QLabel("İşlem detaylarını görmek için takvimden bir güne tıklayın.")
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        info_label.setStyleSheet("color: #6B7280; font-style: italic;")
+
+        layout.addWidget(info_label)
+        layout.addWidget(self.calendar)
+
+        self.tabs.addTab(tab, "Günlük Hareket Detayları")
+
 
     def _create_statistics_tab(self):
         """Aylık/günlük kar/zarar gibi detaylı satış istatistikleri için bir sekme oluşturur."""
@@ -175,26 +203,6 @@ class ReportPage(QWidget):
         self.stats_net_profit_label.setText(
             f"<p style='color:#6B7280;font-size:12pt;'>Net Kâr / Zarar</p><p style='color:{profit_color};{self.Styles.STATS_LABEL}'>{net_profit:,.2f} TL</p>")
 
-    def _create_daily_activity_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(25, 25, 25, 25)
-
-        self.calendar = QCalendarWidget()
-        self.calendar.setStyleSheet(self.Styles.CALENDAR_STYLE)
-
-        self.calendar.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
-        self.calendar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.calendar.clicked.connect(self._open_daily_detail_dialog)
-
-        info_label = QLabel("İşlem detaylarını görmek için takvimden bir güne tıklayın.")
-        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info_label.setStyleSheet("color: #6B7280; font-style: italic;")
-
-        layout.addWidget(info_label)
-        layout.addWidget(self.calendar)
-
-        self.tabs.addTab(tab, "Günlük Hareket Detayları")
 
     def _create_inventory_summary_tab(self):
         tab = QWidget()
@@ -250,4 +258,3 @@ class ReportPage(QWidget):
         super().showEvent(event)
         self._load_inventory_data()
         self._calculate_and_show_statistics()
-

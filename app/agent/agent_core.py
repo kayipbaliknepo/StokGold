@@ -95,6 +95,3 @@ class StokGoldAgent:
             error_message = f"Agent çalışırken bir hata oluştu: {e}"
             print(f"{error_message}\n--- Traceback ---\n{traceback.format_exc()}")
             return "Üzgünüm, beklenmedik bir hata oluştu. Detaylar konsola yazdırıldı."
-
-
-
