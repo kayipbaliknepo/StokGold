@@ -39,6 +39,8 @@ def get_icon_path(icon_name: str) -> str:
 
 APP_DATA_PATH = get_app_data_path()
 
+CONFIG_PATH = os.path.join(APP_DATA_PATH, "config.ini")
+
 DATABASE_PATH = os.path.join(APP_DATA_PATH, "stokgold.db")
 IMAGE_DIR = os.path.join(APP_DATA_PATH, "product_images")
 BARCODE_DIR = os.path.join(APP_DATA_PATH, "barcodes")
