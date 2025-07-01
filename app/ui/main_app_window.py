@@ -10,7 +10,7 @@ from PySide6.QtGui import QIcon, QAction, QGuiApplication
 from PySide6.QtCore import QSize, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint
 
 from app.utils import get_icon_path
-# Artık check_ollama_status'u import etmiyoruz
+
 from .pages.dashboard_page import DashboardPage
 from .pages.inventory_page import InventoryPage
 from .pages.report_page import ReportPage
