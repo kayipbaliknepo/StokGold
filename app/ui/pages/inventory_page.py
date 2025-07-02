@@ -9,7 +9,7 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableView,
     QLineEdit, QLabel, QFrame, QMessageBox, QApplication, QStyle,
-    QFileDialog, QHeaderView, QSizePolicy # <-- EKLENDİ
+    QFileDialog, QHeaderView, QSizePolicy
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QPixmap, QColor, QIcon
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QSize
@@ -80,41 +80,34 @@ class InventoryPage(QWidget):
             QLineEdit:focus { border: 1px solid #4A90E2; }
         """
         TABLE_STYLE = """
-                    QTableView {
-                        background-color: white;
-                        border: 1px solid #E5E7EB;
-                        border-radius: 8px;
-                        gridline-color: #F3F4F6;
-                        font-size: 14px;
-                        selection-behavior: SelectRows;
-                    }
-                    QTableView::item {
-                        padding: 8px; /* Dikey boşluğu biraz azalttık */
-                        border-bottom: 1px solid #F3F4F6;
-                        min-height: 25px; /* <-- DEĞİŞİKLİK BURADA: Her satır için minimum yükseklik */
-                    }
-                    QTableView::item:selected {
-                        background-color: #EBF5FF;
-                        color: #1E3A8A;
-                    }
-                    QHeaderView::section {
-                        background-color: #F9FAFB;
-                        border-top-left-radius: 8px;
-                        border-top-right-radius: 8px;
-                        border-bottom: 1px solid #E5E7EB;
-                        padding: 10px 8px;
-                        font-size: 13px;
-                        font-weight: bold;
-                        color: #374151;
-                    }
-                """
-        PREVIEW_FRAME = """
-            QFrame#PreviewFrame {
+            QTableView {
                 background-color: white;
                 border: 1px solid #E5E7EB;
                 border-radius: 8px;
+                gridline-color: #F3F4F6;
+                font-size: 14px;
+                selection-behavior: SelectRows;
+            }
+            QTableView::item {
+                padding: 8px;
+                border-bottom: 1px solid #F3F4F6;
+            }
+            QTableView::item:selected {
+                background-color: #EBF5FF;
+                color: #1E3A8A;
+            }
+            QHeaderView::section {
+                background-color: #F9FAFB;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                border-bottom: 1px solid #E5E7EB;
+                padding: 10px 8px;
+                font-size: 13px;
+                font-weight: bold;
+                color: #374151;
             }
         """
+        PREVIEW_FRAME = "QFrame#PreviewFrame { background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; }"
         PREVIEW_IMAGE_LABEL = "background-color: #F9FAFB; border: 1px dashed #D1D5DB; border-radius: 6px;"
         PREVIEW_TITLE = "font-size: 16px; font-weight: bold; color: #1F2937;"
         PRODUCT_CODE_LABEL = "font-size: 14px; color: #4B5563; font-weight: bold;"
@@ -129,10 +122,10 @@ class InventoryPage(QWidget):
         main_hbox_layout.setSpacing(20)
 
         left_panel = self._create_left_panel()
-        right_panel = self._create_right_panel()
+        self.right_panel = self._create_right_panel()  # <-- Sağ paneli bir sınıf değişkeni olarak saklıyoruz
 
         main_hbox_layout.addWidget(left_panel, stretch=3)
-        main_hbox_layout.addWidget(right_panel, stretch=1)
+        main_hbox_layout.addWidget(self.right_panel, stretch=1)
 
         self._connect_signals()
         self.load_all_products()
@@ -172,15 +165,14 @@ class InventoryPage(QWidget):
 
         self.barcode_image_label = QLabel()
         self.barcode_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # Barkodun büyümesi için burayı esnek bırakıyoruz
         self.barcode_image_label.setMinimumHeight(100)
-        self.barcode_image_label.setSizePolicy(self.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Expanding)
+        self.barcode_image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         layout.addWidget(preview_title)
-        layout.addWidget(self.image_preview_label, stretch=2)  # Resme daha çok yer
+        layout.addWidget(self.image_preview_label, stretch=2)
         layout.addStretch(1)
         layout.addWidget(self.product_code_label)
-        layout.addWidget(self.barcode_image_label, stretch=1)  # Barkoda resimden daha az yer
+        layout.addWidget(self.barcode_image_label, stretch=1)
 
         return panel
 
@@ -190,23 +182,22 @@ class InventoryPage(QWidget):
         top_bar_layout.setSpacing(10)
 
         button_font = QFont("Segoe UI", 10)
-
-        self.add_product_button = QPushButton(" Yeni Ekle")
-        self.add_product_button.setFont(button_font)
-        self.edit_product_button = QPushButton(" Düzenle")
-        self.edit_product_button.setFont(button_font)
-        self.delete_product_button = QPushButton(" Sil")
-        self.delete_product_button.setFont(button_font)
-        self.export_excel_button = QPushButton(" Excel'e Aktar")
-        self.export_excel_button.setFont(button_font)
-
         icon_size = QSize(16, 16)
+
+        self.add_product_button = QPushButton(" Yeni Ekle");
+        self.add_product_button.setFont(button_font);
         self.add_product_button.setIcon(QIcon(get_icon_path("add.png")));
         self.add_product_button.setIconSize(icon_size)
+        self.edit_product_button = QPushButton(" Düzenle");
+        self.edit_product_button.setFont(button_font);
         self.edit_product_button.setIcon(QIcon(get_icon_path("edit.png")));
         self.edit_product_button.setIconSize(icon_size)
+        self.delete_product_button = QPushButton(" Sil");
+        self.delete_product_button.setFont(button_font);
         self.delete_product_button.setIcon(QIcon(get_icon_path("delete.png")));
         self.delete_product_button.setIconSize(icon_size)
+        self.export_excel_button = QPushButton(" Excel'e Aktar");
+        self.export_excel_button.setFont(button_font);
         self.export_excel_button.setIcon(QIcon(get_icon_path("excel.png")));
         self.export_excel_button.setIconSize(icon_size)
 
@@ -215,42 +206,38 @@ class InventoryPage(QWidget):
         self.edit_product_button.setStyleSheet(self.Styles.BUTTON_SECONDARY)
         self.export_excel_button.setStyleSheet(self.Styles.BUTTON_SECONDARY)
 
-        top_bar_layout.addWidget(self.add_product_button)
-        top_bar_layout.addWidget(self.edit_product_button)
-        top_bar_layout.addWidget(self.delete_product_button)
+        top_bar_layout.addWidget(self.add_product_button);
+        top_bar_layout.addWidget(self.edit_product_button);
+        top_bar_layout.addWidget(self.delete_product_button);
         top_bar_layout.addWidget(self.export_excel_button)
         top_bar_layout.addStretch()
 
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Ürün ara...")
-        self.search_input.setMinimumWidth(250)
+        self.search_input = QLineEdit();
+        self.search_input.setPlaceholderText("Ürün ara...");
+        self.search_input.setMinimumWidth(250);
         self.search_input.setStyleSheet(self.Styles.SEARCH_BAR)
-
         top_bar_layout.addWidget(self.search_input)
 
         return top_bar_layout
 
     def _create_product_table(self) -> QVBoxLayout:
-        table_layout = QVBoxLayout()
+        table_layout = QVBoxLayout();
         table_layout.setContentsMargins(0, 0, 0, 0)
-        self.product_table = QTableView()
+        self.product_table = QTableView();
         self.product_table.setStyleSheet(self.Styles.TABLE_STYLE)
-        self.product_table.setAlternatingRowColors(True)
+        self.product_table.setAlternatingRowColors(True);
         self.product_table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.product_table.setSortingEnabled(True)
+        self.product_table.setSortingEnabled(True);
         self.product_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
-        self.product_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.product_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows);
         self.product_table.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
-        self.product_table.verticalHeader().setVisible(False)
-
+        self.product_table.verticalHeader().setVisible(False);
         self.product_table.horizontalHeader().setStretchLastSection(True)
         self.product_table.horizontalHeader().setHighlightSections(False)
-
-        self.source_model = QStandardItemModel()
-        self.proxy_model = NumericSortProxyModel()
+        self.source_model = QStandardItemModel();
+        self.proxy_model = NumericSortProxyModel();
         self.proxy_model.setSourceModel(self.source_model)
-        self.product_table.setModel(self.proxy_model)
-
+        self.product_table.setModel(self.proxy_model);
         table_layout.addWidget(self.product_table)
         return table_layout
 
@@ -263,10 +250,18 @@ class InventoryPage(QWidget):
         self.search_input.textChanged.connect(self.filter_products)
 
     def _on_selection_changed(self):
+        """Tabloda seçim değiştiğinde çağrılır. Çoklu seçimi yönetir."""
         self.update_button_states()
-        secili_urun = self._get_selected_product()
-        self._update_preview_image(secili_urun)
-        self._update_preview_barcode(secili_urun)
+        selected_indexes = self.product_table.selectionModel().selectedRows()
+
+        if len(selected_indexes) == 1:
+            secili_urun = self._get_selected_product(selected_indexes[0])
+            self._update_preview_image(secili_urun)
+            self._update_preview_barcode(secili_urun)
+        else:
+            message = "Birden fazla ürün seçildi" if len(selected_indexes) > 1 else "Bir ürün seçin..."
+            self._update_preview_image(None, message=message)
+            self._update_preview_barcode(None)
 
     def update_button_states(self):
         has_selection = self.product_table.selectionModel().hasSelection()
@@ -274,17 +269,17 @@ class InventoryPage(QWidget):
         self.edit_product_button.setEnabled(selection_count == 1)
         self.delete_product_button.setEnabled(has_selection)
 
-    def _update_preview_image(self, urun: Urun | None):
+    def _update_preview_image(self, urun: Urun | None, message: str = "Resim Yok"):
+        """Önizleme alanındaki ürün resmini günceller."""
         if urun and urun.resim_yolu and os.path.exists(urun.resim_yolu):
             pixmap = QPixmap(urun.resim_yolu)
-            scaled_pixmap = pixmap.scaled(
-                self.image_preview_label.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
+            scaled_pixmap = pixmap.scaledToWidth(
+                self.right_panel.width() - 40,
                 Qt.TransformationMode.SmoothTransformation
             )
             self.image_preview_label.setPixmap(scaled_pixmap)
         else:
-            self.image_preview_label.setText("Resim Yok")
+            self.image_preview_label.setText(message)
             self.image_preview_label.setPixmap(QPixmap())
 
     def _update_preview_barcode(self, urun: Urun | None):
@@ -293,12 +288,11 @@ class InventoryPage(QWidget):
             barcode_path = os.path.join(BARCODE_DIR, f"{urun.urun_kodu}.png")
             if os.path.exists(barcode_path):
                 barcode_pixmap = QPixmap(barcode_path)
-                self.barcode_image_label.setPixmap(barcode_pixmap.scaled(
-                    self.barcode_image_label.width(),
-                    self.barcode_image_label.height(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
+                scaled_barcode = barcode_pixmap.scaledToWidth(
+                    self.right_panel.width() - 60,
                     Qt.TransformationMode.SmoothTransformation
-                ))
+                )
+                self.barcode_image_label.setPixmap(scaled_barcode)
             else:
                 self.barcode_image_label.setText("Barkod Üretilmemiş")
                 self.barcode_image_label.setPixmap(QPixmap())
@@ -326,11 +320,10 @@ class InventoryPage(QWidget):
         warning_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
         for urun in urunler_listesi:
             self._urunler_cache[urun.id] = urun
-            item_id = QStandardItem(str(urun.id))
-            item_kod = QStandardItem(urun.urun_kodu)
-            item_cins = QStandardItem(urun.cins)
+            item_id = QStandardItem(str(urun.id));
+            item_kod = QStandardItem(urun.urun_kodu);
+            item_cins = QStandardItem(urun.cins);
             item_tarih = QStandardItem(urun.eklenme_tarihi.strftime('%d-%m-%Y') if urun.eklenme_tarihi else "")
-
             item_ayar = QStandardItem();
             item_ayar.setData(urun.ayar, Qt.ItemDataRole.UserRole);
             item_ayar.setData(str(urun.ayar), Qt.ItemDataRole.DisplayRole);
@@ -347,22 +340,17 @@ class InventoryPage(QWidget):
             item_stok.setData(urun.stok_adeti, Qt.ItemDataRole.UserRole);
             item_stok.setData(str(urun.stok_adeti), Qt.ItemDataRole.DisplayRole);
             item_stok.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
             row_items = [item_id, item_kod, item_cins, item_ayar, item_gram, item_maliyet, item_stok, item_tarih]
-
             stok_adeti = urun.stok_adeti
             if stok_adeti == 0:
-                color = QColor("#D9534F");
-                [item.setForeground(color) for item in row_items];
-                item_stok.setIcon(warning_icon)
+                color = QColor("#D9534F"); [item.setForeground(color) for item in row_items]; item_stok.setIcon(
+                    warning_icon)
             elif 0 < stok_adeti < 5:
-                color = QColor("#F0AD4E");
-                [item.setForeground(color) for item in row_items];
-                item_stok.setIcon(warning_icon)
-
+                color = QColor("#F0AD4E"); [item.setForeground(color) for item in row_items]; item_stok.setIcon(
+                    warning_icon)
             self.source_model.appendRow(row_items)
-
-        self.product_table.resizeColumnsToContents()
+            self.product_table.setRowHeight(self.source_model.rowCount() - 1, 40)
+        self.product_table.resizeColumnsToContents();
         self.product_table.setColumnHidden(0, True)
 
     def _get_selected_product(self, proxy_index=None) -> Urun | None:
@@ -378,14 +366,13 @@ class InventoryPage(QWidget):
         dialog = AddProductDialog(parent=self)
         if dialog.exec():
             yeni_urun = dialog.get_product_data()
-            if not yeni_urun.urun_kodu or not yeni_urun.cins:
-                QMessageBox.warning(self, "Eksik Bilgi", "Ürün Kodu ve Cins alanları boş bırakılamaz.")
-                return
+            if not yeni_urun.urun_kodu or not yeni_urun.cins: QMessageBox.warning(self, "Eksik Bilgi",
+                                                                                  "Ürün Kodu ve Cins alanları boş bırakılamaz."); return
             yeni_urun_id = add_product(yeni_urun)
             if yeni_urun_id:
                 log_transaction(urun_id=yeni_urun_id, tip='Alış', adet=yeni_urun.stok_adeti,
                                 birim_fiyat=yeni_urun.maliyet)
-                QMessageBox.information(self, "Başarılı", f"'{yeni_urun.cins}' başarıyla eklendi.")
+                QMessageBox.information(self, "Başarılı", f"'{yeni_urun.cins}' başarıyla eklendi.");
                 self.load_all_products()
             else:
                 QMessageBox.critical(self, "Veritabanı Hatası", "Ürün eklenirken bir hata oluştu.")
@@ -397,7 +384,7 @@ class InventoryPage(QWidget):
         if dialog.exec():
             guncellenmis_urun = dialog.get_product_data()
             if update_product(guncellenmis_urun):
-                QMessageBox.information(self, "Başarılı", f"'{guncellenmis_urun.cins}' başarıyla güncellendi.")
+                QMessageBox.information(self, "Başarılı", f"'{guncellenmis_urun.cins}' başarıyla güncellendi.");
                 self.load_all_products()
             else:
                 QMessageBox.critical(self, "Veritabanı Hatası", "Ürün güncellenirken bir hata oluştu.")
@@ -431,8 +418,7 @@ class InventoryPage(QWidget):
             silinen_sayisi, basarisiz_sayisi = 0, 0
             for urun in urun_to_delete_list:
                 if delete_product(urun.id):
-                    self._delete_associated_files(urun);
-                    silinen_sayisi += 1
+                    self._delete_associated_files(urun); silinen_sayisi += 1
                 else:
                     basarisiz_sayisi += 1
             QMessageBox.information(self, "İşlem Tamamlandı",
@@ -440,7 +426,7 @@ class InventoryPage(QWidget):
             self.load_all_products()
 
     def _open_purchase_dialog(self):
-        dialog = TransactionDialog(mode='alış', parent=self)
+        dialog = TransactionDialog(mode='alış', parent=self);
         if dialog.exec(): self.load_all_products()
 
     def _open_sale_dialog(self):
@@ -449,16 +435,14 @@ class InventoryPage(QWidget):
 
     def _export_to_excel(self):
         urunler = get_all_products()
-        if not urunler:
-            QMessageBox.information(self, "Bilgi", "Aktarılacak ürün bulunmuyor.")
-            return
+        if not urunler: QMessageBox.information(self, "Bilgi", "Aktarılacak ürün bulunmuyor."); return
         default_filename = f"Stok_Raporu_{datetime.now().strftime('%Y-%m-%d_%H%M')}.xlsx"
         save_path, _ = QFileDialog.getSaveFileName(self, "Excel Dosyasını Kaydet", default_filename,
                                                    "Excel Dosyaları (*.xlsx)")
         if save_path:
             try:
-                workbook = openpyxl.Workbook()
-                sheet = workbook.active
+                workbook = openpyxl.Workbook();
+                sheet = workbook.active;
                 sheet.title = "Stok Envanteri"
                 headers = ["Ürün Kodu", "Cins", "Ayar", "Gram", "Maliyet (TL)", "Satış Fiyatı (TL)", "Stok Adedi",
                            "Eklenme Tarihi", "Açıklama"]
