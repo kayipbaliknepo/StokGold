@@ -31,6 +31,7 @@ class DashboardPage(QWidget):
     purchase_button_clicked = Signal()
     sale_button_clicked = Signal()
     assistant_button_clicked = Signal()
+    repair_button_clicked = Signal()
 
     class Styles:
         """Tüm arayüz stillerini merkezi olarak yöneten sınıf."""
@@ -130,6 +131,7 @@ class DashboardPage(QWidget):
         self.sale_button = self._create_sidebar_button("Stok Satışı Yap", "sale.png")
         self.inventory_button = self._create_sidebar_button("Envanteri Görüntüle", "inventory.png")
         self.reports_button = self._create_sidebar_button("Raporları Görüntüle", "report.png")
+        self.repair_button = self._create_sidebar_button("Tamir Takibi", "repair.png")
 
         self.assistant_button = QPushButton(" Akıllı Asistan")
         self.assistant_button.setIcon(QIcon(get_icon_path("assistant.png")))
@@ -141,6 +143,7 @@ class DashboardPage(QWidget):
         layout.addWidget(self.sale_button)
         layout.addWidget(self.inventory_button)
         layout.addWidget(self.reports_button)
+        layout.addWidget(self.repair_button)
         layout.addStretch()
         layout.addWidget(self.assistant_button)
 
@@ -241,6 +244,7 @@ class DashboardPage(QWidget):
         self.inventory_button.clicked.connect(self.inventory_button_clicked.emit)
         self.reports_button.clicked.connect(self.reports_button_clicked.emit)
         self.assistant_button.clicked.connect(self.assistant_button_clicked.emit)
+        self.repair_button.clicked.connect(self.repair_button_clicked.emit)
 
     def update_dashboard_data(self):
         print("Kontrol Paneli verileri yenileniyor...")

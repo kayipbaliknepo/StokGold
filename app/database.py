@@ -4,9 +4,11 @@
 
 from datetime import datetime
 from .models import Urun
+from .tamir_model import Tamir
 import sqlite3
 from .utils import DATABASE_PATH
 import os
+
 
 
 def get_db_connection():
@@ -17,19 +19,25 @@ def get_db_connection():
 
 
 def create_table():
-
+    """
+    Veritabanı bağlantısı kurar ve 'urunler', 'hareketler' ve 'tamirler'
+    tablolarını, eğer mevcut değillerse, oluşturur.
+    """
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        print("Veritabanı tabloları kontrol ediliyor/oluşturuluyor...")
+
+        # Mevcut urunler tablosu
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS urunler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 urun_kodu TEXT NOT NULL UNIQUE,
                 cins TEXT NOT NULL,
                 ayar INTEGER DEFAULT 22,
-                gram REAL,  
+                gram REAL,
                 maliyet REAL DEFAULT 0.0,
                 satis_fiyati REAL DEFAULT 0.0,
                 stok_adeti INTEGER NOT NULL DEFAULT 1,
@@ -39,23 +47,43 @@ def create_table():
             )
         """)
 
+        # Mevcut hareketler tablosu
         cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS hareketler (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        urun_id INTEGER NOT NULL,
-                        tip TEXT NOT NULL, -- 'Alış' veya 'Satış'
-                        adet INTEGER NOT NULL,
-                        birim_fiyat REAL NOT NULL,
-                        toplam_tutar REAL NOT NULL,
-                        tarih TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (urun_id) REFERENCES urunler (id)
-                    )
-                """)
+            CREATE TABLE IF NOT EXISTS hareketler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                urun_id INTEGER NOT NULL,
+                tip TEXT NOT NULL,
+                adet INTEGER NOT NULL,
+                birim_fiyat REAL NOT NULL,
+                toplam_tutar REAL NOT NULL,
+                tarih TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (urun_id) REFERENCES urunler (id) ON DELETE CASCADE
+            )
+        """)
+
+        # --- EKSİK OLAN KISIM BURASI ---
+        # Yeni tamirler tablosunu oluşturan SQL komutu
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tamirler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musteri_ad_soyad TEXT NOT NULL,
+                musteri_telefon TEXT,
+                urun_aciklamasi TEXT NOT NULL,
+                hasar_tespiti TEXT,
+                alinan_tarih DATE NOT NULL,
+                tahmini_teslim_tarihi DATE,
+                tamir_ucreti REAL,
+                durum TEXT NOT NULL DEFAULT 'Beklemede',
+                notlar TEXT
+            )
+        """)
+        # --------------------------------
 
         conn.commit()
+        print("Tüm tablolar başarıyla kontrol edildi/oluşturuldu.")
 
     except sqlite3.Error as e:
-        print(f"Veritabanı hatası: {e}")
+        print(f"Veritabanı hatası (create_table): {e}")
     finally:
         if conn:
             conn.close()
@@ -479,3 +507,126 @@ def get_top_profitable_products(limit: int = 1):
     finally:
         if conn:
             conn.close()
+
+
+def add_tamir(tamir: Tamir) -> int | None:
+    """Veritabanına yeni bir Tamir nesnesi ekler ve yeni kaydın ID'sini döndürür."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        sql = """INSERT INTO tamirler (
+                    musteri_ad_soyad, musteri_telefon, urun_aciklamasi, hasar_tespiti,
+                    alinan_tarih, tahmini_teslim_tarihi, tamir_ucreti, durum, notlar
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+
+        alinan_tarih_str = tamir.alinan_tarih.strftime('%Y-%m-%d') if tamir.alinan_tarih else None
+        teslim_tarihi_str = tamir.tahmini_teslim_tarihi.strftime('%Y-%m-%d') if tamir.tahmini_teslim_tarihi else None
+
+        cursor.execute(sql, (
+            tamir.musteri_ad_soyad, tamir.musteri_telefon, tamir.urun_aciklamasi,
+            tamir.hasar_tespiti, alinan_tarih_str, teslim_tarihi_str,
+            tamir.tamir_ucreti, tamir.durum, tamir.notlar
+        ))
+        conn.commit()
+        print(f"Başarılı: Yeni tamir kaydı eklendi (ID: {cursor.lastrowid})")
+        return cursor.lastrowid
+    except sqlite3.Error as e:
+        print(f"Veritabanı hatası (add_tamir): {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_all_tamirler() -> list[Tamir]:
+    """Veritabanındaki tüm tamir kayıtlarını getirir."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tamirler ORDER BY alinan_tarih DESC, id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    tamirler = []
+    for row in rows:
+        tamirler.append(Tamir(
+            id=row['id'],
+            musteri_ad_soyad=row['musteri_ad_soyad'],
+            musteri_telefon=row['musteri_telefon'],
+            urun_aciklamasi=row['urun_aciklamasi'],
+            hasar_tespiti=row['hasar_tespiti'],
+            alinan_tarih=datetime.strptime(row['alinan_tarih'], '%Y-%m-%d').date() if row['alinan_tarih'] else None,
+            tahmini_teslim_tarihi=datetime.strptime(row['tahmini_teslim_tarihi'], '%Y-%m-%d').date() if row[
+                'tahmini_teslim_tarihi'] else None,
+            tamir_ucreti=row['tamir_ucreti'],
+            durum=row['durum'],
+            notlar=row['notlar']
+        ))
+    return tamirler
+
+
+def update_tamir(tamir: Tamir) -> bool:
+    """Mevcut bir tamir kaydını günceller."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        sql = """UPDATE tamirler SET
+                    musteri_ad_soyad = ?, musteri_telefon = ?, urun_aciklamasi = ?, 
+                    hasar_tespiti = ?, alinan_tarih = ?, tahmini_teslim_tarihi = ?, 
+                    tamir_ucreti = ?, durum = ?, notlar = ?
+                 WHERE id = ?"""
+
+        alinan_tarih_str = tamir.alinan_tarih.strftime('%Y-%m-%d') if tamir.alinan_tarih else None
+        teslim_tarihi_str = tamir.tahmini_teslim_tarihi.strftime('%Y-%m-%d') if tamir.tahmini_teslim_tarihi else None
+
+        cursor.execute(sql, (
+            tamir.musteri_ad_soyad, tamir.musteri_telefon, tamir.urun_aciklamasi,
+            tamir.hasar_tespiti, alinan_tarih_str, teslim_tarihi_str,
+            tamir.tamir_ucreti, tamir.durum, tamir.notlar, tamir.id
+        ))
+        conn.commit()
+        print(f"Başarılı: Tamir kaydı güncellendi (ID: {tamir.id})")
+        return True
+    except sqlite3.Error as e:
+        print(f"Veritabanı hatası (update_tamir): {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def delete_tamir(tamir_id: int) -> bool:
+    """Verilen ID'ye sahip tamir kaydını siler."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM tamirler WHERE id = ?", (tamir_id,))
+        conn.commit()
+        print(f"Başarılı: Tamir kaydı silindi (ID: {tamir_id})")
+        return True
+    except sqlite3.Error as e:
+        print(f"Veritabanı hatası (delete_tamir): {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def search_repairs(search_term: str) -> list[Tamir]:
+    """Müşteri adı veya ürün açıklamasına göre tamir kayıtlarını arar."""
+    all_repairs = get_all_tamirler()
+    if not search_term:
+        return all_repairs
+
+    search_term_lower = search_term.lower()
+    filtered_list = []
+    for tamir in all_repairs:
+        musteri_lower = tamir.musteri_ad_soyad.lower()
+        urun_lower = tamir.urun_aciklamasi.lower()
+
+        if search_term_lower in musteri_lower or search_term_lower in urun_lower:
+            filtered_list.append(tamir)
+
+    return filtered_list
