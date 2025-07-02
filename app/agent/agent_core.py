@@ -3,20 +3,20 @@
 # See LICENSE file for full license details.
 
 import os
+import sqlite3
 import traceback
 from dotenv import load_dotenv
 
-# Groq yerine Google Generative AI import ediyoruz
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 
 from . import tools
 
-# Araç listemiz aynı kalıyor, çünkü araçlar modelden bağımsızdır.
-# Önceki adımlardaki gibi tüm araçların (hesap makinesi dahil) burada olduğundan emin olun.
+
 AGENT_TOOLS = [
-    tools.gunluk_islem_detaylari_getir, # <-- YENİ VE DAHA AKILLI ARACIMIZ
+    tools.gunluk_islem_detaylari_getir,
     tools.stok_guncelle,
     tools.get_stock_count_for_product,
     tools.add_new_product,
@@ -95,3 +95,6 @@ class StokGoldAgent:
             error_message = f"Agent çalışırken bir hata oluştu: {e}"
             print(f"{error_message}\n--- Traceback ---\n{traceback.format_exc()}")
             return "Üzgünüm, beklenmedik bir hata oluştu. Detaylar konsola yazdırıldı."
+
+
+

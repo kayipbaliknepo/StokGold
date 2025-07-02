@@ -102,3 +102,4 @@ class MainApplicationWindow(QMainWindow):
             if hasattr(self.inventory_page, 'load_all_products'): self.inventory_page.load_all_products()
             self._animate_transition(current_widget, self.dashboard_page, direction='backward')
         self.toolbar.setVisible(False)
+

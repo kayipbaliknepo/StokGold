@@ -26,16 +26,14 @@ def get_app_data_path():
     os.makedirs(path, exist_ok=True)
     return path
 
-# --- YENİ EKLENEN FONKSİYON ---
+
 def get_icon_path(icon_name: str) -> str:
     """
     Gerekli ikon dosyasının tam yolunu, programın çalışma şekline
     (geliştirme veya .exe) göre doğru bir şekilde döndürür.
     """
     return os.path.join(get_base_path(), "assets", "icons", icon_name)
-# -----------------------------
 
-# --- Uygulama genelinde kullanılacak sabit yollar ---
 
 APP_DATA_PATH = get_app_data_path()
 

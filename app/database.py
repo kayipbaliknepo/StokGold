@@ -29,7 +29,7 @@ def create_table():
                 urun_kodu TEXT NOT NULL UNIQUE,
                 cins TEXT NOT NULL,
                 ayar INTEGER DEFAULT 22,
-                gram REAL,  -- <-- NOT NULL KALDIRILDI
+                gram REAL,  
                 maliyet REAL DEFAULT 0.0,
                 satis_fiyati REAL DEFAULT 0.0,
                 stok_adeti INTEGER NOT NULL DEFAULT 1,
@@ -119,6 +119,8 @@ def get_all_products():
         if conn:
             conn.close()
 
+
+
 def delete_product(product_id: int):
 
     conn = None
@@ -165,6 +167,7 @@ def update_product(urun: Urun):
     finally:
         if conn:
             conn.close()
+
 
 
 def search_products(search_term: str):
@@ -407,23 +410,25 @@ def get_statistics_for_period(start_date: str, end_date: str):
 
     return stats
 
-
 def get_low_stock_products(threshold: int):
-    """Stoğu verilen eşik değerinin altında olan ürünleri döndürür."""
+    """Stoğu verilen eşik değerinin altında olan ürünleri döndürür (0 dahil)."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Stoğu 0'dan büyük ama eşik değerinden küçük olanları getiriyoruz
+
     sql = """SELECT urun_kodu, cins, stok_adeti FROM urunler 
-             WHERE stok_adeti > 0 AND stok_adeti < ? 
+             WHERE stok_adeti < ? 
              ORDER BY stok_adeti ASC"""
+
     try:
         cursor.execute(sql, (threshold,))
-        return cursor.fetchall() # Sonuçları liste olarak döndürür
+        return cursor.fetchall()
     except sqlite3.Error as e:
         print(f"Düşük stok sorgusu hatası: {e}")
         return []
     finally:
         conn.close()
+
+
 def get_product_variety_count():
     """Veritabanındaki toplam benzersiz ürün çeşidi sayısını döndürür."""
     conn = get_db_connection()

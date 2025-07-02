@@ -4,6 +4,7 @@
 
 import os
 import re
+
 from langchain_core.tools import tool
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
@@ -47,6 +48,8 @@ def urun_ara(sorgu: str) -> str:
     print(f">>> Araç Kullanılıyor: urun_ara, Sorgu: {sorgu}")
     sonuclar = search_products(sorgu)
     return _format_product_list(sonuclar)
+
+
 
 @tool(return_direct=True)
 def get_stock_count_for_product(urun_adi: str) -> str:
