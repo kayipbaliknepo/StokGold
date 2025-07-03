@@ -239,6 +239,8 @@ class InventoryPage(QWidget):
         self.proxy_model.setSourceModel(self.source_model)
         self.product_table.setModel(self.proxy_model);
         table_layout.addWidget(self.product_table)
+
+
         return table_layout
 
     def _connect_signals(self):
@@ -298,6 +300,7 @@ class InventoryPage(QWidget):
                 self.barcode_image_label.setPixmap(QPixmap())
         else:
             self.product_code_label.clear()
+
             self.barcode_image_label.clear()
             self.barcode_image_label.setPixmap(QPixmap())
 
@@ -350,7 +353,7 @@ class InventoryPage(QWidget):
                     warning_icon)
             self.source_model.appendRow(row_items)
             self.product_table.setRowHeight(self.source_model.rowCount() - 1, 40)
-        self.product_table.resizeColumnsToContents();
+            self.product_table.resizeColumnsToContents();
         self.product_table.setColumnHidden(0, True)
 
     def _get_selected_product(self, proxy_index=None) -> Urun | None:

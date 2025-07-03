@@ -75,7 +75,7 @@ class MainApplicationWindow(QMainWindow):
 
     def _create_pages(self):
         """Tüm sayfa widget'larının birer kopyasını oluşturur ve stack'e ekler."""
-        self.dashboard_page = DashboardPage()
+        self.dashboard_page = DashboardPage(self)
         self.inventory_page = InventoryPage(self)
         self.reports_page = ReportPage(self)
         self.repair_page = RepairPage(self)  # Yeni tamir sayfasını da ekliyoruz

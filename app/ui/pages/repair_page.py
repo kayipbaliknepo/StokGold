@@ -187,6 +187,7 @@ class RepairPage(QWidget):
         self.repair_table.setModel(self.repair_model)
         self.status_delegate = StatusDelegate(self)
         self.repair_table.setItemDelegateForColumn(3, self.status_delegate)
+
         return self.repair_table
 
     def _connect_signals(self):
@@ -349,4 +350,3 @@ class RepairPage(QWidget):
                 self.clear_selection()  # Seçimi temizle
         except Exception as e:
             print(f"Durum değiştirilirken hata: {e}")
-
