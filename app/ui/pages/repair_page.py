@@ -202,7 +202,7 @@ class RepairPage(QWidget):
     def load_all_repairs(self):
         """Veritabanından tüm tamir kayıtlarını çeker ve tabloyu doldurur."""
         current_selection_id = None
-        if self.repair_table.selectionModel().hasSelection():
+        if self.repair_table.selectionModel() and self.repair_table.selectionModel().hasSelection():
             current_selection_id = self._get_selected_repair_id()
 
         self.repair_model.clear()
@@ -211,18 +211,24 @@ class RepairPage(QWidget):
 
         new_selection_row = -1
         for i, tamir in enumerate(self.all_repairs):
-            row = [QStandardItem(tamir.musteri_ad_soyad), QStandardItem(tamir.urun_aciklamasi),
-                   QStandardItem(tamir.alinan_tarih.strftime('%d-%m-%Y')), QStandardItem(tamir.durum)]
-            row[0].setData(tamir.id, Qt.ItemDataRole.UserRole)
+            row = [
+                QStandardItem(str(tamir.musteri_ad_soyad or '')),
+                QStandardItem(str(tamir.urun_aciklamasi or '')),
+                QStandardItem(tamir.alinan_tarih.strftime('%d-%m-%Y') if tamir.alinan_tarih else ''),
+                QStandardItem(str(tamir.durum or ''))
+            ]
+            row[0].setData(tamir.id, Qt.UserRole)
             self.repair_model.appendRow(row)
-            self.repair_table.setRowHeight(i, 40)
-            if tamir.id == current_selection_id:
-                new_selection_row = i
 
-        self.repair_table.resizeColumnsToContents()
-        self.repair_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.repair_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        # Satır yüksekliğini tüm satırlar için sabitle
+        self.repair_table.verticalHeader().setDefaultSectionSize(40)
+        self.repair_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
 
+        # Sütunları ekrana yayıcı ama stabil hale getir
+        for i in range(self.repair_model.columnCount()):
+            self.repair_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+
+        # Seçimi geri getir
         if new_selection_row != -1:
             self.repair_table.selectRow(new_selection_row)
 
