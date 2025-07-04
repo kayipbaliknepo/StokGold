@@ -179,7 +179,7 @@ class RepairPage(QWidget):
         self.repair_table.setSortingEnabled(True)
         self.repair_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers);
         self.repair_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.repair_table.setSelectionMode(QTableView.SelectionMode.SingleSelection);
+        self.repair_table.setSelectionMode(QTableView.SelectionMode.ExtendedSelection);
         self.repair_table.verticalHeader().setVisible(False)
         self.repair_table.horizontalHeader().setHighlightSections(False);
         self.repair_table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -221,7 +221,7 @@ class RepairPage(QWidget):
             self.repair_model.appendRow(row)
 
         # Satır yüksekliğini tüm satırlar için sabitle
-        self.repair_table.verticalHeader().setDefaultSectionSize(40)
+        self.repair_table.verticalHeader().setDefaultSectionSize(35)
         self.repair_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
 
         # Sütunları ekrana yayıcı ama stabil hale getir

@@ -489,3 +489,4 @@ class InventoryPage(QWidget):
                 QMessageBox.information(self, "Başarılı", f"Envanter başarıyla şu dosyaya aktarıldı:\n{save_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Hata", f"Dosya aktarılırken bir hata oluştu:\n{e}")
+

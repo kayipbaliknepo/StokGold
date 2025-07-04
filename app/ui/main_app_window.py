@@ -156,4 +156,3 @@ class MainApplicationWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Asistan Hatası",
                                  f"Akıllı Asistan başlatılırken bir hata oluştu:\n\n{e}\n\nLütfen .env dosyasını ve API anahtarınızı kontrol edin.")
-
