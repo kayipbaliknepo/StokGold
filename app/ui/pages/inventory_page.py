@@ -316,44 +316,72 @@ class InventoryPage(QWidget):
         self.update_button_states()
 
     def _populate_table(self, urunler_listesi: list):
-        self.source_model.clear();
+        self.source_model.clear()
         self._urunler_cache.clear()
         self.source_model.setHorizontalHeaderLabels(
-            ['ID', 'Ürün Kodu', 'Cins', 'Ayar', 'Gram', 'Maliyet', 'Stok', 'Eklenme Tarihi'])
+            ['ID', 'Ürün Kodu', 'Cins', 'Ayar', 'Gram', 'Maliyet', 'Stok', 'Eklenme Tarihi']
+        )
+
         warning_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
+
         for urun in urunler_listesi:
             self._urunler_cache[urun.id] = urun
-            item_id = QStandardItem(str(urun.id));
-            item_kod = QStandardItem(urun.urun_kodu);
-            item_cins = QStandardItem(urun.cins);
-            item_tarih = QStandardItem(urun.eklenme_tarihi.strftime('%d-%m-%Y') if urun.eklenme_tarihi else "")
-            item_ayar = QStandardItem();
-            item_ayar.setData(urun.ayar, Qt.ItemDataRole.UserRole);
-            item_ayar.setData(str(urun.ayar), Qt.ItemDataRole.DisplayRole);
+
+            item_id = QStandardItem(str(urun.id))
+            item_kod = QStandardItem(str(urun.urun_kodu or ''))
+            item_cins = QStandardItem(str(urun.cins or ''))
+
+            item_tarih = QStandardItem(
+                urun.eklenme_tarihi.strftime('%d-%m-%Y') if urun.eklenme_tarihi else ""
+            )
+
+            item_ayar = QStandardItem()
+            item_ayar.setData(urun.ayar, Qt.UserRole)
+            item_ayar.setData(str(urun.ayar), Qt.DisplayRole)
             item_ayar.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
             item_gram = QStandardItem()
-            if urun.gram is not None: item_gram.setData(urun.gram, Qt.ItemDataRole.UserRole); item_gram.setData(
-                f"{urun.gram:.2f}", Qt.ItemDataRole.DisplayRole)
+            if urun.gram is not None:
+                item_gram.setData(urun.gram, Qt.UserRole)
+                item_gram.setData(f"{urun.gram:.2f}", Qt.DisplayRole)
             item_gram.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            item_maliyet = QStandardItem();
-            item_maliyet.setData(urun.maliyet, Qt.ItemDataRole.UserRole);
-            item_maliyet.setData(f"{urun.maliyet:,.2f} TL", Qt.ItemDataRole.DisplayRole);
+
+            item_maliyet = QStandardItem()
+            item_maliyet.setData(urun.maliyet, Qt.UserRole)
+            item_maliyet.setData(f"{urun.maliyet:,.2f} TL", Qt.DisplayRole)
             item_maliyet.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            item_stok = QStandardItem();
-            item_stok.setData(urun.stok_adeti, Qt.ItemDataRole.UserRole);
-            item_stok.setData(str(urun.stok_adeti), Qt.ItemDataRole.DisplayRole);
+
+            item_stok = QStandardItem()
+            item_stok.setData(urun.stok_adeti, Qt.UserRole)
+            item_stok.setData(str(urun.stok_adeti), Qt.DisplayRole)
             item_stok.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
             row_items = [item_id, item_kod, item_cins, item_ayar, item_gram, item_maliyet, item_stok, item_tarih]
+
+            # Stok durumu rengi ve ikon
             stok_adeti = urun.stok_adeti
             if stok_adeti == 0:
-                color = QColor("#D9534F"); [item.setForeground(color) for item in row_items]; item_stok.setIcon(
-                    warning_icon)
+                color = QColor("#D9534F")  # kırmızı
+                for item in row_items:
+                    item.setForeground(color)
+                item_stok.setIcon(warning_icon)
             elif 0 < stok_adeti < 5:
-                color = QColor("#F0AD4E"); [item.setForeground(color) for item in row_items]; item_stok.setIcon(
-                    warning_icon)
+                color = QColor("#F0AD4E")  # turuncu
+                for item in row_items:
+                    item.setForeground(color)
+                item_stok.setIcon(warning_icon)
+
             self.source_model.appendRow(row_items)
-            self.product_table.setRowHeight(self.source_model.rowCount() - 1, 40)
-            self.product_table.resizeColumnsToContents();
+
+        # Satır yüksekliği: her satır için değil, tüm tablo için tek seferde sabitle
+        self.product_table.verticalHeader().setDefaultSectionSize(30)
+        self.product_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+
+        # Otomatik sütun genişliğini devre dışı bırak, Stretch ile yay
+        for i in range(self.source_model.columnCount()):
+            self.product_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+
+        # ID sütununu gizle
         self.product_table.setColumnHidden(0, True)
 
     def _get_selected_product(self, proxy_index=None) -> Urun | None:
