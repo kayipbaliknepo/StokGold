@@ -15,7 +15,7 @@ def main():
     create_table()
     app = QApplication(sys.argv)
     window = MainApplicationWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec())
 
 if __name__ == '__main__':

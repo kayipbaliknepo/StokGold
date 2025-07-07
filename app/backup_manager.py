@@ -1,7 +1,7 @@
 import os
 import shutil
 from datetime import datetime
-from .utils import DATABASE_PATH # Mevcut veritabanı yolunu almak için
+from .utils import DATABASE_PATH
 
 def backup_database(target_directory: str) -> (bool, str):
     """
@@ -34,6 +34,7 @@ def restore_database(source_path: str) -> (bool, str):
 
         # Mevcut veritabanı dosyasını yedekten gelenle değiştir
         shutil.copy2(source_path, DATABASE_PATH)
+
         return True, "Veritabanı başarıyla geri yüklendi. Değişikliklerin etkili olması için lütfen uygulamayı yeniden başlatın."
     except Exception as e:
         return False, f"Geri yükleme sırasında bir hata oluştu: {e}"

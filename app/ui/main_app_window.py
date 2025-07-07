@@ -15,6 +15,7 @@ from .pages.dashboard_page import DashboardPage
 from .pages.inventory_page import InventoryPage
 from .pages.report_page import ReportPage
 from .pages.repair_page import RepairPage
+from .pages.data_management_page import DataManagementPage
 from .assistant_dialog import AssistantDialog
 
 
@@ -79,11 +80,15 @@ class MainApplicationWindow(QMainWindow):
         self.inventory_page = InventoryPage(self)
         self.reports_page = ReportPage(self)
         self.repair_page = RepairPage(self)  # Yeni tamir sayfasını da ekliyoruz
+        self.data_management_page = DataManagementPage(self)
 
         self.stacked_widget.addWidget(self.dashboard_page)
         self.stacked_widget.addWidget(self.inventory_page)
         self.stacked_widget.addWidget(self.reports_page)
         self.stacked_widget.addWidget(self.repair_page)
+        self.stacked_widget.addWidget(self.data_management_page)
+
+
 
     def _connect_signals(self):
         """Tüm sinyal-slot bağlantılarını tek bir yerden yönetir."""
@@ -91,6 +96,7 @@ class MainApplicationWindow(QMainWindow):
         self.dashboard_page.inventory_button_clicked.connect(lambda: self.go_to_page(self.inventory_page))
         self.dashboard_page.reports_button_clicked.connect(lambda: self.go_to_page(self.reports_page))
         self.dashboard_page.repair_button_clicked.connect(lambda: self.go_to_page(self.repair_page))
+        self.dashboard_page.data_management_button_clicked.connect(lambda: self.go_to_page(self.data_management_page))
         self.dashboard_page.assistant_button_clicked.connect(self._open_assistant_dialog)
 
         # Alış ve Satış diyalogları, envanter sayfasının kendi fonksiyonları tarafından açılır
