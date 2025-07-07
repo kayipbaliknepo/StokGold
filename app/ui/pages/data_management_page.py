@@ -1,3 +1,7 @@
+# MIT License
+# Copyright (c) 2025 Aykut Yahya Ay
+# See LICENSE file for full license details.
+
 import os
 import traceback
 from PySide6.QtWidgets import (
@@ -73,11 +77,11 @@ class DataManagementPage(QWidget):
         page_title.setStyleSheet("color: #1F2937; margin-bottom: 10px;")
         content_layout.addWidget(page_title, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # Kartları yan yana koymak için yeni bir yatay layout
+        # Kartları yan yana koymak için
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(30)
 
-        # Kartları oluştur ve yatay layout'a ekle
+        # Kartları oluştur ve yatay layouta ekle
         backup_card = self._create_backup_card()
         restore_card = self._create_restore_card()
         cards_layout.addWidget(backup_card)
@@ -148,7 +152,7 @@ class DataManagementPage(QWidget):
         )
         description.setStyleSheet(self.Styles.DESCRIPTION_LABEL)
         description.setWordWrap(True)
-        description.setTextFormat(Qt.RichText) 
+        description.setTextFormat(Qt.RichText)
 
         self.restore_button = QPushButton(" Yedek Dosyasını Seç ve Geri Yükle")
         self.restore_button.setIcon(QIcon(get_icon_path("load.png")))
@@ -159,8 +163,7 @@ class DataManagementPage(QWidget):
         layout.addWidget(description)
         layout.addStretch()
 
-        # --- DEĞİŞİKLİK BURADA ---
-        # Bu butonu da aynı şekilde ortalıyoruz.
+
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         button_layout.addWidget(self.restore_button)
