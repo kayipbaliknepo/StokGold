@@ -31,6 +31,11 @@ StokGold is a modern, feature-rich desktop inventory management application desi
     * Understand natural language queries (e.g., "How many gold rings are in stock?", "Show me the profit from last month").
     * Execute tasks like adding products, updating stock, and generating reports through conversation.
 
+* **Backup Save & Load**
+    * Backup Database.
+    * Safe and easy to load old version databases.
+    * Easy to share databases and tables.	
+
 ---
 
 ## 🛠️ Technologies Used
