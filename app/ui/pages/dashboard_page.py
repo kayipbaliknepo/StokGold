@@ -281,3 +281,6 @@ class DashboardPage(QWidget):
                 self.son_eklenenler_data.setHtml("<p style='color: #9CA3AF;'>Veritabanına henüz ürün eklenmemiş.</p>")
         except Exception as e:
             print(f"Dashboard verileri güncellenirken hata: {e}")
+
+
+            #fixed the layout sizes and some location glitches#
